@@ -157,7 +157,9 @@ curl http://localhost:8000/api/health
 │   POST /api/enhance-image    → rembg U²-Net + PIL        │
 │   POST /api/generate-listing → Gemini vision (3 langs)   │
 │   POST /api/price            → Gemini + fair-price rules │
-│   POST /api/publish          → ONDC:RET10 catalog        │
+│   POST /api/publish          → ONDC:RET10 + saved to db  │
+│   GET  /p/{id}               → public storefront page    │
+│   GET  /api/qr/{id}          → QR PNG for that page      │
 │   GET  /api/health           → which mode am I in?       │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -178,6 +180,8 @@ Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 │   │   ├── config.py         env settings, mock/live decision
 │   │   ├── schemas.py        Pydantic contracts
 │   │   ├── mock_data.py      keyword-aware offline AI
+│   │   ├── db/               SQLModel tables + repository
+│   │   ├── templates/        server-rendered storefront page
 │   │   └── services/         gemini · image · pricing · ondc
 │   ├── tests/                API contract tests (run in mock mode)
 │   ├── requirements.txt      core — always installs cleanly
@@ -206,7 +210,7 @@ ONDC and Ministry of Textiles people.
 | Price reasoning | ⚠️ Real LLM call — **not yet grounded in market data** |
 | ONDC catalog | ⚠️ **Schema-correct payload, not yet POSTed to a live BPP.** Registration is an organisational step, not a technical one |
 | GI-tag detection | ⚠️ LLM guess; registry verification planned |
-| Persistence + public storefront | 🔜 Phase 1, in progress |
+| Persistence + public storefront | ✅ Real (SQLite; `GET /p/{id}` + QR, served offline over the laptop hotspot) |
 
 We do **not** claim to be live on ONDC. See [docs/ROADMAP.md](docs/ROADMAP.md).
 

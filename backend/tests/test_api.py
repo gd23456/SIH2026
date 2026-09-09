@@ -13,6 +13,8 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from app import main
+from app.config import Settings
 from app.main import app
 
 client = TestClient(app)
@@ -189,3 +191,111 @@ def test_publish_ids_are_unique():
     payload = {"listing": LISTING_FIXTURE, "price": 749}
     ids = {client.post("/api/publish", json=payload).json()["listing_id"] for _ in range(5)}
     assert len(ids) == 5, "each publish must mint a distinct listing id"
+
+# --- storefront, persistence + QR -----------------------------------------
+
+
+def _publish(price: int = 749, **extra) -> dict:
+    payload = {
+        "listing": LISTING_FIXTURE,
+        "price": price,
+        "artisan_name": "Lakshmi Devi",
+        "location": "Bengaluru",
+        **extra,
+    }
+    r = client.post("/api/publish", json=payload)
+    assert r.status_code == 200
+    return r.json()
+
+
+def test_storefront_url_is_derived_from_request_host():
+    """The old hardcoded karigar.ai domain does not exist — the demo ended on
+    a dead link. Links must point at whatever host the caller reached us on,
+    because on demo day that is the laptop's LAN IP, not a domain."""
+    body = _publish()
+    assert "karigar.ai" not in body["storefront_url"]
+    # TestClient presents itself as http://testserver
+    assert body["storefront_url"] == f"http://testserver/p/{body['listing_id']}"
+    assert body["listing_id"] in body["whatsapp_share_url"]
+
+
+def test_public_base_url_overrides_request_host(monkeypatch):
+    """Set PUBLIC_BASE_URL and a real deployment wins over the request host."""
+    monkeypatch.setattr(main.settings, "PUBLIC_BASE_URL", "https://karigar.example/")
+    body = _publish()
+    assert body["storefront_url"] == f"https://karigar.example/p/{body['listing_id']}"
+
+
+def test_published_listing_survives_and_renders():
+    """A publish must outlive its own response: the judge scans the QR later."""
+    body = _publish(price=1299)
+    r = client.get(f"/p/{body['listing_id']}")
+
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    page = r.text
+
+    assert LISTING_FIXTURE["title"]["en"] in page
+    assert LISTING_FIXTURE["title"]["hi"] in page       # all three languages
+    assert LISTING_FIXTURE["title"]["kn"] in page
+    assert "1,299" in page                               # price, formatted
+    assert "Lakshmi Devi" in page
+    assert "Natural Bamboo" in page
+    assert body["listing_id"] in page
+
+    # No external requests: the demo phone is on a hotspot with no internet.
+    for scheme in ("http://", "https://"):
+        assert f'src="{scheme}' not in page
+        assert f'href="{scheme}' not in page
+
+
+def test_storefront_page_embeds_its_own_qr():
+    body = _publish()
+    page = client.get(f"/p/{body['listing_id']}").text
+    assert f"/api/qr/{body['listing_id']}" in page
+
+
+def test_qr_endpoint_returns_a_png():
+    body = _publish()
+    r = client.get(f"/api/qr/{body['listing_id']}")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+    png_magic = bytes.fromhex("89504e470d0a1a0a")
+    assert r.content.startswith(png_magic)
+    Image.open(io.BytesIO(r.content)).verify()
+
+
+def test_unknown_listing_is_not_found():
+    assert client.get("/p/KARIGAR-NOPE").status_code == 404
+    assert client.get("/api/qr/KARIGAR-NOPE").status_code == 404
+
+
+def test_unknown_listing_page_is_html_not_json():
+    """A mis-scanned QR should not show a judge a raw JSON error blob."""
+    r = client.get("/p/KARIGAR-NOPE")
+    assert r.headers["content-type"].startswith("text/html")
+    assert "{" not in r.text[:20]
+
+# --- configuration ---------------------------------------------------------
+
+
+def test_relative_sqlite_path_is_anchored_to_backend_dir():
+    """A relative sqlite URL must not follow the working directory.
+
+    `make backend` launches uvicorn from the repo root with --app-dir backend,
+    so the shipped sqlite:///./karigar.db would land the database in the repo
+    root, outside the backend/*.db gitignore rules.
+    """
+    resolved = Settings(DATABASE_URL="sqlite:///./karigar.db").database_url
+    assert resolved.endswith("/backend/karigar.db"), resolved
+    assert "/./" not in resolved
+
+
+def test_absolute_sqlite_path_is_left_alone(tmp_path):
+    target = (tmp_path / "explicit.db").resolve().as_posix()
+    assert Settings(DATABASE_URL=f"sqlite:///{target}").database_url == f"sqlite:///{target}"
+
+
+def test_non_sqlite_database_url_is_left_alone():
+    url = "postgresql+psycopg://user:pw@db.example/karigar"
+    assert Settings(DATABASE_URL=url).database_url == url

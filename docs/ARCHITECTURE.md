@@ -31,6 +31,9 @@ The architecture assumes all three will fail.
 │  POST /api/generate-listing → gemini_service → Gemini vision    │
 │  POST /api/price            → pricing_service→ Gemini + rules   │
 │  POST /api/publish          → ondc_service   → ONDC:RET10       │
+│                             → db.repository  → SQLite           │
+│  GET  /p/{id}               → Jinja2         → storefront page  │
+│  GET  /api/qr/{id}          → qrcode         → PNG              │
 │  GET  /api/health           → which mode am I actually in?      │
 │                                                                 │
 │  Every service: try live → on ANY exception → mock_data         │
