@@ -70,6 +70,10 @@ export function demoPublish(listing = {}, price = 749) {
   return {
     listing_id: id,
     status: "PUBLISHED",
+    // No backend reachable, so nothing was actually persisted and there is no
+    // page for a QR code to point at. PublishStep reads this flag and shows
+    // the share link without a dead QR.
+    _demo: true,
     storefront_url: storefront,
     whatsapp_share_url:
       "https://wa.me/?text=" +
@@ -96,4 +100,25 @@ export function demoPublish(listing = {}, price = 749) {
       },
     },
   };
+}
+
+// Canned "My Products" rows for when the backend is unreachable. Shapes match
+// ListingSummary from the API so the grid renders identically either way.
+export function demoListings() {
+  const mk = (id, title, price, category) => ({
+    listing_id: id,
+    title,
+    price,
+    category,
+    gi_candidate: null,
+    has_image: false,
+    image_url: "",
+    storefront_url: `https://karigar.ai/p/${id}`,
+    created_at: new Date().toISOString(),
+    _demo: true,
+  });
+  return [
+    mk("KARIGAR-DEMO0001", demoListing("bamboo basket").title, 749, "Home & Living / Storage"),
+    mk("KARIGAR-DEMO0002", demoListing("clay vase").title, 899, "Home & Living / Decor"),
+  ];
 }

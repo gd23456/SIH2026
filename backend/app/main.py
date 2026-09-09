@@ -7,11 +7,15 @@ Endpoints:
   POST /api/generate-listing -> {transcript, language, image_b64?} -> multilingual Listing
   POST /api/price            -> product attrs -> fair price + reasoning
   POST /api/publish          -> listing+price -> ONDC catalog + share links (persisted)
+  GET  /api/listings         -> the artisan's published products, newest first
+  GET  /api/listings/{id}/image -> that listing's photo as a PNG
   GET  /p/{listing_id}       -> public storefront page (what the QR code opens)
   GET  /api/qr/{listing_id}  -> QR PNG pointing at that page
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import io
 import logging
 from contextlib import asynccontextmanager
@@ -29,6 +33,7 @@ from .db import get_session, init_db
 from .db import repository as repo
 from .schemas import (
     GenerateListingRequest,
+    ListingSummary,
     PriceRequest,
     PublishRequest,
     PublishResponse,
@@ -155,6 +160,55 @@ def publish(
         whatsapp_share_url=ondc_service.whatsapp_share(title, req.price, storefront),
         storefront_url=storefront,
     )
+
+
+@app.get("/api/listings", response_model=list[ListingSummary])
+def list_listings(
+    request: Request,
+    limit: int = 24,
+    session: Session = Depends(get_session),
+):
+    """Everything this artisan has published, newest first.
+
+    Backs the "My Products" screen, which is what turns the demo from a
+    one-shot script into something that looks like a product.
+    """
+    limit = max(1, min(limit, 100))
+    base = _base_url(request)
+    return [
+        ListingSummary(
+            listing_id=row.id,
+            title={"en": row.title_en, "hi": row.title_hi, "kn": row.title_kn},
+            price=row.price,
+            category=row.category,
+            gi_candidate=row.gi_candidate,
+            has_image=bool(row.image_b64),
+            image_url=f"{base}/api/listings/{row.id}/image",
+            storefront_url=f"{base}/p/{row.id}",
+            created_at=row.created_at,
+        )
+        for row in repo.recent_listings(session, limit=limit)
+    ]
+
+
+@app.get("/api/listings/{listing_id}/image")
+def listing_image(listing_id: str, session: Session = Depends(get_session)):
+    """The stored photo as a real PNG.
+
+    Kept out of the /api/listings payload so a grid of thumbnails doesn't ship
+    a megabyte of base64 over the demo hotspot.
+    """
+    row = repo.get_listing(session, listing_id)
+    if row is None:
+        raise HTTPException(404, "Listing not found")
+    if not row.image_b64:
+        raise HTTPException(404, "This listing has no image")
+    try:
+        raw = base64.b64decode(row.image_b64, validate=True)
+    except (ValueError, binascii.Error) as e:
+        raise HTTPException(500, "Stored image is not valid base64") from e
+    return Response(content=raw, media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=300"})
 
 
 _NOT_FOUND_PAGE = """<!doctype html><meta charset="utf-8">

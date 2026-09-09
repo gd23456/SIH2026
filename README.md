@@ -158,6 +158,7 @@ curl http://localhost:8000/api/health
 │   POST /api/generate-listing → Gemini vision (3 langs)   │
 │   POST /api/price            → Gemini + fair-price rules │
 │   POST /api/publish          → ONDC:RET10 + saved to db  │
+│   GET  /api/listings         → the artisan's catalogue   │
 │   GET  /p/{id}               → public storefront page    │
 │   GET  /api/qr/{id}          → QR PNG for that page      │
 │   GET  /api/health           → which mode am I in?       │

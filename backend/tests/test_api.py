@@ -299,3 +299,51 @@ def test_absolute_sqlite_path_is_left_alone(tmp_path):
 def test_non_sqlite_database_url_is_left_alone():
     url = "postgresql+psycopg://user:pw@db.example/karigar"
     assert Settings(DATABASE_URL=url).database_url == url
+
+# --- my products (listing index) -------------------------------------------
+
+
+def test_listings_returns_published_items_newest_first():
+    a = _publish(price=111)["listing_id"]
+    b = _publish(price=222)["listing_id"]
+
+    rows = client.get("/api/listings").json()
+    ids = [r["listing_id"] for r in rows]
+    assert a in ids and b in ids
+    assert ids.index(b) < ids.index(a), "newest listing must come first"
+
+    row = next(r for r in rows if r["listing_id"] == b)
+    assert row["price"] == 222
+    assert {"en", "hi", "kn"} <= row["title"].keys()
+    assert row["storefront_url"].endswith(f"/p/{b}")
+    assert row["image_url"].endswith(f"/api/listings/{b}/image")
+
+
+def test_listings_omit_the_image_blob():
+    """A grid of thumbnails must not ship a megabyte of base64 to a phone."""
+    _publish(image_b64=base64.b64encode(_png_bytes()).decode())
+    rows = client.get("/api/listings").json()
+    assert rows, "expected at least one listing"
+    for row in rows:
+        assert "image_b64" not in row
+
+
+def test_listings_limit_is_clamped():
+    assert len(client.get("/api/listings?limit=1").json()) == 1
+    # out-of-range values must not blow up or return the whole table
+    assert client.get("/api/listings?limit=0").status_code == 200
+    assert client.get("/api/listings?limit=99999").status_code == 200
+
+
+def test_listing_image_serves_a_png():
+    body = _publish(image_b64=base64.b64encode(_png_bytes()).decode())
+    r = client.get(f"/api/listings/{body['listing_id']}/image")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+    Image.open(io.BytesIO(r.content)).verify()
+
+
+def test_listing_image_404s_without_a_photo():
+    body = _publish()  # fixture carries no image
+    assert client.get(f"/api/listings/{body['listing_id']}/image").status_code == 404
+    assert client.get("/api/listings/KARIGAR-NOPE/image").status_code == 404

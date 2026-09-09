@@ -72,5 +72,14 @@ def get_listing(session: Session, listing_id: str) -> Listing | None:
     return session.get(Listing, listing_id)
 
 
+def recent_listings(session: Session, limit: int = 24) -> list[Listing]:
+    """Newest first — the artisan's most recent work is what they want to see."""
+    return list(
+        session.exec(
+            select(Listing).order_by(Listing.created_at.desc()).limit(limit)
+        ).all()
+    )
+
+
 def get_artisan(session: Session, artisan_id: int | None) -> Artisan | None:
     return session.get(Artisan, artisan_id) if artisan_id is not None else None
