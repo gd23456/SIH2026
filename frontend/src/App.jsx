@@ -6,6 +6,7 @@ import ReviewStep from "./components/ReviewStep";
 import PriceStep from "./components/PriceStep";
 import PublishStep from "./components/PublishStep";
 import MyProducts from "./components/MyProducts";
+import BuyerView from "./components/BuyerView";
 import ConnectSheet from "./components/ConnectSheet";
 import { Header, Stepper } from "./components/ui";
 
@@ -17,7 +18,7 @@ export default function App() {
   const [listing, setListing] = useState(null);
   const [price, setPrice] = useState(0);
   const [source, setSource] = useState(null); // 'live' | 'demo'
-  const [view, setView] = useState("flow"); // 'flow' | 'products'
+  const [view, setView] = useState("flow"); // 'flow' | 'products' | 'buyer'
   const [showConnect, setShowConnect] = useState(false);
 
   function reset() {
@@ -43,6 +44,7 @@ export default function App() {
         )}
 
         <div className="flex-1 overflow-y-auto">
+          {view === "buyer" && <BuyerView lang={lang} onBack={() => setView("flow")} />}
           {view === "products" && (
             <MyProducts
               lang={lang}
@@ -59,6 +61,7 @@ export default function App() {
               setLang={setLang}
               onStart={() => setStep(1)}
               onMyProducts={() => setView("products")}
+              onBuyerView={() => setView("buyer")}
               onConnect={() => setShowConnect(true)}
             />
           )}
@@ -106,6 +109,7 @@ export default function App() {
               imageB64={imageB64}
               onReset={reset}
               onMyProducts={() => setView("products")}
+              onBuyerView={() => setView("buyer")}
             />
           )}
         </div>

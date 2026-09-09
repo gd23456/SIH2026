@@ -202,3 +202,18 @@ export function demoListings() {
     }),
   ];
 }
+
+// Offline buyer-side search: filter the demo catalogue by title / category so
+// the buyer view still "finds" a product with no backend reachable.
+export function demoSearch(query = "") {
+  const q = query.trim().toLowerCase();
+  const rows = demoListings();
+  if (!q) return rows;
+  return rows.filter((r) => {
+    const hay = [r.title?.en, r.title?.hi, r.title?.kn, r.category, r.gi_state]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
+}

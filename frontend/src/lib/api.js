@@ -3,7 +3,7 @@
 // - Demo: if the backend is unreachable OR demo mode is forced, uses
 //   client-side canned data so the app never breaks on stage / on-device.
 
-import { demoListing, demoListings, demoPrice, demoPublish } from "./demoData";
+import { demoListing, demoListings, demoPrice, demoPublish, demoSearch } from "./demoData";
 
 function isNative() {
   return typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
@@ -204,6 +204,22 @@ export async function listListings(limit = 24) {
   } catch {
     _lastSource = "demo";
     return demoListings();
+  }
+}
+
+/** Buyer-side search across the published catalog. Falls back to demo rows. */
+export async function searchListings(query = "", limit = 24) {
+  if (forcedDemo()) {
+    _lastSource = "demo";
+    return demoSearch(query);
+  }
+  try {
+    const data = await jfetch(`/api/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    _lastSource = "live";
+    return data;
+  } catch {
+    _lastSource = "demo";
+    return demoSearch(query);
   }
 }
 

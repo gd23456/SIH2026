@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from .models import Artisan, Listing
@@ -82,6 +83,35 @@ def recent_listings(session: Session, limit: int = 24) -> list[Listing]:
             select(Listing).order_by(Listing.created_at.desc()).limit(limit)
         ).all()
     )
+
+
+def search_listings(session: Session, query: str, limit: int = 24) -> list[Listing]:
+    """Buyer-side search over published listings.
+
+    Matches the query (case-insensitive) against the English/Hindi/Kannada
+    title, category and the tags blob — enough to find "the item you just
+    published" in the buyer view. An empty query returns the newest listings,
+    so the buyer screen has something to show before anyone types.
+    """
+    q = (query or "").strip()
+    if not q:
+        return recent_listings(session, limit=limit)
+
+    like = f"%{q.lower()}%"
+    stmt = (
+        select(Listing)
+        .where(
+            func.lower(Listing.title_en).like(like)
+            | func.lower(Listing.title_hi).like(like)
+            | func.lower(Listing.title_kn).like(like)
+            | func.lower(Listing.category).like(like)
+            | func.lower(Listing.tags_json).like(like)
+            | func.lower(Listing.material).like(like)
+        )
+        .order_by(Listing.created_at.desc())
+        .limit(limit)
+    )
+    return list(session.exec(stmt).all())
 
 
 def get_artisan(session: Session, artisan_id: int | None) -> Artisan | None:

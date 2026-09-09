@@ -4,7 +4,7 @@ import { publish, qrUrl } from "../lib/api";
 import { Spinner } from "./ui";
 import RemoteImage from "./RemoteImage";
 
-export default function PublishStep({ lang, listing, price, imageB64, onReset, onMyProducts }) {
+export default function PublishStep({ lang, listing, price, imageB64, onReset, onMyProducts, onBuyerView }) {
   const [res, setRes] = useState(null);
   const [showJson, setShowJson] = useState(false);
   // If the QR image 404s or the host is unreachable, fall back to text
@@ -89,9 +89,14 @@ export default function PublishStep({ lang, listing, price, imageB64, onReset, o
         </div>
       )}
 
-      <button className="btn-ghost mt-4" onClick={onMyProducts}>
-        🗂️ {t("myProducts", lang)}
-      </button>
+      <div className="grid grid-cols-2 gap-3 mt-4">
+        <button className="btn-ghost !mt-0" onClick={onMyProducts}>
+          🗂️ {t("myProducts", lang)}
+        </button>
+        <button className="btn-ghost !mt-0" onClick={onBuyerView}>
+          🛒 {t("buyerView", lang)}
+        </button>
+      </div>
 
       <a href={res.whatsapp_share_url} target="_blank" rel="noreferrer" className="btn-primary mt-3 text-center !bg-[#25D366]">
         {t("shareWhatsapp", lang)} 💬

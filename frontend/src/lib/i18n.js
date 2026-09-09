@@ -104,6 +104,26 @@ const STR = {
   },
   live: { en: "Live", hi: "लाइव", kn: "ಲೈವ್" },
   done: { en: "Done", hi: "हो गया", kn: "ಮುಗಿದಿದೆ" },
+  // buyer view (ONDC network, buyer side of the story)
+  buyerView: { en: "Buyer view", hi: "खरीदार दृश्य", kn: "ಖರೀದಿದಾರ ವೀಕ್ಷಣೆ" },
+  ondcNetwork: { en: "ONDC Network", hi: "ONDC नेटवर्क", kn: "ONDC ನೆಟ್‌ವರ್ಕ್" },
+  buyerViewSub: {
+    en: "What a buyer sees across the network",
+    hi: "नेटवर्क पर खरीदार को क्या दिखता है",
+    kn: "ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಖರೀದಿದಾರರಿಗೆ ಏನು ಕಾಣುತ್ತದೆ",
+  },
+  searchPlaceholder: {
+    en: "Search handmade products…",
+    hi: "हस्तनिर्मित उत्पाद खोजें…",
+    kn: "ಕೈಯಿಂದ ಮಾಡಿದ ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ…",
+  },
+  searchNoResults: { en: "No products found", hi: "कोई उत्पाद नहीं मिला", kn: "ಯಾವುದೇ ಉತ್ಪನ್ನ ಸಿಗಲಿಲ್ಲ" },
+  searchNoResultsSub: {
+    en: "Try another word, or publish a product first.",
+    hi: "दूसरा शब्द आज़माएँ, या पहले कोई उत्पाद प्रकाशित करें।",
+    kn: "ಬೇರೆ ಪದ ಪ್ರಯತ್ನಿಸಿ, ಅಥವಾ ಮೊದಲು ಉತ್ಪನ್ನ ಪ್ರಕಟಿಸಿ.",
+  },
+  buyNow: { en: "View & buy", hi: "देखें और खरीदें", kn: "ನೋಡಿ ಖರೀದಿಸಿ" },
   // connection sheet (Android needs this: there is no JS console on a phone)
   connection: { en: "Connection", hi: "कनेक्शन", kn: "ಸಂಪರ್ಕ" },
   connectionSub: {

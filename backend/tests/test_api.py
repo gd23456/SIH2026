@@ -484,6 +484,36 @@ def test_listing_image_serves_a_png():
     Image.open(io.BytesIO(r.content)).verify()
 
 
+# --- buyer-side search ------------------------------------------------------
+
+
+def test_search_finds_a_published_item_by_title_word():
+    """The buyer beat: publish, then find that exact item in a search."""
+    body = _publish(price=749)
+    rows = client.get("/api/search?q=bamboo").json()
+    assert any(r["listing_id"] == body["listing_id"] for r in rows)
+    for r in rows:
+        assert r["storefront_url"].endswith(f"/p/{r['listing_id']}")
+        assert "image_url" in r
+
+
+def test_search_matches_category_and_tags():
+    _publish(price=749)
+    assert client.get("/api/search?q=storage").json(), "should match category"
+    assert client.get("/api/search?q=handmade").json(), "should match a tag"
+
+
+def test_search_empty_query_returns_recent_catalog():
+    _publish(price=749)
+    rows = client.get("/api/search?q=").json()
+    assert isinstance(rows, list) and rows
+
+
+def test_search_miss_returns_empty_list():
+    rows = client.get("/api/search?q=zzzznowaythisexists").json()
+    assert rows == []
+
+
 def test_listing_image_404s_without_a_photo():
     body = _publish()  # fixture carries no image
     assert client.get(f"/api/listings/{body['listing_id']}/image").status_code == 404

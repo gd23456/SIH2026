@@ -183,6 +183,22 @@ def publish(
     )
 
 
+def _summary(row, base: str) -> ListingSummary:
+    return ListingSummary(
+        listing_id=row.id,
+        title={"en": row.title_en, "hi": row.title_hi, "kn": row.title_kn},
+        price=row.price,
+        category=row.category,
+        gi_candidate=row.gi_candidate,
+        gi_verified=row.gi_verified,
+        gi_state=row.gi_state,
+        has_image=bool(row.image_b64),
+        image_url=f"{base}/api/listings/{row.id}/image",
+        storefront_url=f"{base}/p/{row.id}",
+        created_at=row.created_at,
+    )
+
+
 @app.get("/api/listings", response_model=list[ListingSummary])
 def list_listings(
     request: Request,
@@ -196,22 +212,25 @@ def list_listings(
     """
     limit = max(1, min(limit, 100))
     base = _base_url(request)
-    return [
-        ListingSummary(
-            listing_id=row.id,
-            title={"en": row.title_en, "hi": row.title_hi, "kn": row.title_kn},
-            price=row.price,
-            category=row.category,
-            gi_candidate=row.gi_candidate,
-            gi_verified=row.gi_verified,
-            gi_state=row.gi_state,
-            has_image=bool(row.image_b64),
-            image_url=f"{base}/api/listings/{row.id}/image",
-            storefront_url=f"{base}/p/{row.id}",
-            created_at=row.created_at,
-        )
-        for row in repo.recent_listings(session, limit=limit)
-    ]
+    return [_summary(row, base) for row in repo.recent_listings(session, limit=limit)]
+
+
+@app.get("/api/search", response_model=list[ListingSummary])
+def search(
+    request: Request,
+    q: str = "",
+    limit: int = 24,
+    session: Session = Depends(get_session),
+):
+    """Buyer-side search across the whole published catalog.
+
+    This is the buyer half of the story: an artisan publishes, then anyone on
+    the network can search and find that exact item. Same ListingSummary shape
+    as /api/listings so the buyer grid renders identically.
+    """
+    limit = max(1, min(limit, 100))
+    base = _base_url(request)
+    return [_summary(row, base) for row in repo.search_listings(session, q, limit=limit)]
 
 
 @app.get("/api/listings/{listing_id}/image")
