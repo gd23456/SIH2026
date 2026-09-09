@@ -1,7 +1,7 @@
 import React from "react";
 import { LANGS, t } from "../lib/i18n";
 
-export default function Welcome({ lang, setLang, onStart, onMyProducts }) {
+export default function Welcome({ lang, setLang, onStart, onMyProducts, onConnect }) {
   return (
     <div className="flex flex-col min-h-full px-6 pt-16 pb-10 safe-top safe-bottom">
       <div className="flex-1 flex flex-col items-center justify-center text-center fade-in">
@@ -42,6 +42,9 @@ export default function Welcome({ lang, setLang, onStart, onMyProducts }) {
         </button>
         <button className="btn-ghost" onClick={onMyProducts}>
           🗂️ {t("myProducts", lang)}
+        </button>
+        <button onClick={onConnect} className="w-full text-center text-xs text-clay-500 py-2 font-medium">
+          ⚙︎ {t("connection", lang)}
         </button>
         <p className="text-center text-xs text-clay-400">
           Powered by ONDC · Ministry of Textiles ready

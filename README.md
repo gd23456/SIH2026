@@ -98,22 +98,28 @@ Something wrong? Run **`make doctor`**, then see [docs/SETUP.md](docs/SETUP.md).
 
 ## Run on Android 🤖
 
-The frontend is wrapped with Capacitor, so there's a real native Android project.
+`frontend/android/` is a real native Android project — it opens in Android
+Studio, has its own manifest and `MainActivity`, and uses the native
+`SpeechRecognizer`. It renders the built web app, so **the build order matters**:
 
 ```bash
-make android      # build web assets → sync → open Android Studio
-make apk          # build a shareable debug APK
+cd frontend
+npm run build && npx cap sync android    # ← sync is the step everyone forgets
+cd android && ./gradlew assembleDebug
 ```
+
+📖 **[docs/BUILD_ORDER.md](docs/BUILD_ORDER.md) — read this first.** Exact
+versions, verification after every stage, and how to get a phone talking to
+your laptop.
 
 | Setup | Backend URL |
 |---|---|
-| Emulator | `http://10.0.2.2:8000` (the app's default — `localhost` won't work) |
-| Real device | `http://<laptop-LAN-IP>:8000` — get it with `make ip` |
+| Emulator | `http://10.0.2.2:8000` (automatic) |
+| Real device | `http://<laptop-LAN-IP>:8000` — set it in-app: **⚙︎ Connection** |
 
-```js
-// point the app at your laptop, from the device console
-localStorage.setItem('karigar_api_base', 'http://192.168.1.42:8000')
-```
+The Connection screen tests the address and tells you whether the phone can
+actually see the laptop. It also carries the offline-demo switch, so neither
+needs a JS console any more.
 
 Native voice uses `@capacitor-community/speech-recognition`; grant the mic
 permission on first use.
@@ -234,6 +240,7 @@ We do **not** claim to be live on ONDC. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 | Doc | What's in it |
 |---|---|
+| [docs/BUILD_ORDER.md](docs/BUILD_ORDER.md) | **Start here.** Build order, versions, phone↔laptop setup |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branch flow, PR rules, **security rules** |
 | [docs/SETUP.md](docs/SETUP.md) | Every failure mode and its fix |
 | [docs/TEAM.md](docs/TEAM.md) | Who owns which directory |

@@ -21,6 +21,44 @@ export function apiBase() {
   return "http://localhost:8000";
 }
 
+/** Persist a backend address chosen in the Connection sheet. */
+export function setApiBase(url) {
+  const clean = String(url || "").trim().replace(/\/+$/, "");
+  try {
+    if (clean) localStorage.setItem("karigar_api_base", clean);
+    else localStorage.removeItem("karigar_api_base");
+  } catch {}
+  return clean;
+}
+
+/** True when running inside the Capacitor Android shell rather than a browser. */
+export function isNativeApp() {
+  return Boolean(isNative());
+}
+
+/**
+ * Probe a backend without falling back to demo data.
+ *
+ * Every other call in this file silently degrades to canned data, which is
+ * right for the demo but useless when you are trying to find out whether the
+ * phone can actually see the laptop. This one reports the truth.
+ */
+export async function checkHealth(base) {
+  const target = String(base || apiBase()).trim().replace(/\/+$/, "");
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(`${target}/api/health`, { signal: ctrl.signal });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const data = await res.json();
+    return { ok: true, mode: data.mode, model: data.model, base: target };
+  } catch (e) {
+    return { ok: false, error: e?.name === "AbortError" ? "timeout" : "unreachable" };
+  } finally {
+    clearTimeout(to);
+  }
+}
+
 export function forcedDemo() {
   try {
     return localStorage.getItem("karigar_demo") === "1";
