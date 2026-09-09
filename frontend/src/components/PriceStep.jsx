@@ -68,6 +68,12 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
             <p className="text-[13px] leading-snug text-clay-700 font-medium">{t("wageProtected", lang)}</p>
           </div>
         )}
+        {data.gi_premium_applied && (
+          <div className="mt-3 flex items-start gap-2 rounded-2xl bg-haldi/15 px-3 py-2.5 text-left">
+            <span className="text-base leading-none mt-0.5">✓</span>
+            <p className="text-[13px] leading-snug text-clay-800 font-medium">{t("giPremiumNote", lang)}</p>
+          </div>
+        )}
       </div>
 
       <div className="card p-5 mt-4">

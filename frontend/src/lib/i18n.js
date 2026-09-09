@@ -43,6 +43,12 @@ const STR = {
   technique: { en: "Technique", hi: "तकनीक", kn: "ತಂತ್ರ" },
   time: { en: "Made in", hi: "बनाने का समय", kn: "ತಯಾರಿ ಸಮಯ" },
   giTag: { en: "Possible GI tag", hi: "संभावित GI टैग", kn: "ಸಂಭಾವ್ಯ GI ಟ್ಯಾಗ್" },
+  verifiedGi: { en: "Verified GI", hi: "सत्यापित GI", kn: "ಪರಿಶೀಲಿತ GI" },
+  giPremiumNote: {
+    en: "Verified GI — priced above a generic equivalent.",
+    hi: "सत्यापित GI — सामान्य समकक्ष से अधिक दाम।",
+    kn: "ಪರಿಶೀಲಿತ GI — ಸಾಮಾನ್ಯ ಸಮಾನಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಬೆಲೆ.",
+  },
   next: { en: "Looks good — set price", hi: "ठीक है — दाम तय करें", kn: "ಸರಿ — ಬೆಲೆ ನಿಗದಿಪಡಿಸಿ" },
   // price
   fairPrice: { en: "Fair price", hi: "उचित दाम", kn: "ನ್ಯಾಯಯುತ ಬೆಲೆ" },

@@ -31,8 +31,16 @@ export default function ReviewStep({ lang, listing, imageB64, onDone }) {
           </div>
 
           <h3 className="text-xl font-bold text-clay-900 leading-snug">{title}</h3>
-          {listing.gi_candidate && (
-            <span className="chip mt-2 !bg-haldi/20 !text-clay-800">🏷️ {listing.gi_candidate}</span>
+          {listing.gi_verified ? (
+            <span className="inline-flex items-center gap-1.5 mt-2 rounded-full bg-leaf/15 px-3 py-1 text-xs font-bold text-leaf">
+              ✓ {t("verifiedGi", lang)}
+              {listing.gi_registry_name && <span className="font-semibold">· {listing.gi_registry_name}</span>}
+              {listing.gi_state && <span className="font-normal opacity-80">({listing.gi_state})</span>}
+            </span>
+          ) : (
+            listing.gi_candidate && (
+              <span className="chip mt-2 !bg-haldi/20 !text-clay-800">🏷️ {t("giTag", lang)}: {listing.gi_candidate}</span>
+            )
           )}
           <p className="text-clay-700 mt-3 leading-relaxed text-[15px]">{desc}</p>
 

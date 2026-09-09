@@ -26,7 +26,12 @@ class Listing(BaseModel):
     production_time: str = ""
     dimensions: str = ""
     tags: list[str] = []
-    gi_candidate: str | None = Field(None, description="Possible GI (Geographical Indication) tag match")
+    gi_candidate: str | None = Field(None, description="Possible GI (Geographical Indication) tag — the LLM's *guess*")
+    # Registry-verified GI (distinct from the LLM guess above). Set by
+    # gi_service.verify() against data/gi_registry.json.
+    gi_verified: bool = False
+    gi_registry_name: str | None = None
+    gi_state: str | None = None
 
 
 class PriceRequest(BaseModel):
@@ -58,6 +63,10 @@ class PriceResponse(BaseModel):
     market_source: str = ""
     wage_floor: int = 0
     wage_floor_applied: bool = False
+    # Verified-GI premium (a registry-verified GI is priced above a generic
+    # equivalent — a verified Channapatna toy ≠ a generic wooden toy).
+    gi_verified: bool = False
+    gi_premium_applied: bool = False
 
 
 class PublishRequest(BaseModel):
@@ -82,6 +91,8 @@ class ListingSummary(BaseModel):
     price: int
     category: str = ""
     gi_candidate: str | None = None
+    gi_verified: bool = False
+    gi_state: str | None = None
     has_image: bool = False
     image_url: str
     storefront_url: str

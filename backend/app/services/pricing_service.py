@@ -21,7 +21,11 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from . import gemini_service
+from . import gemini_service, gi_service
+
+# A registry-verified GI is worth more than a generic equivalent — a verified
+# Channapatna toy should not be priced like any wooden toy. Modest, honest bump.
+GI_PREMIUM_MULTIPLIER = 1.15
 
 # A day of skilled artisan labour, in INR. Anchored to a fair rural craft wage
 # (above the ~₹300–350 MGNREGA floor most states pay). The suggested price can
@@ -143,6 +147,14 @@ def fair_price(payload: dict) -> dict:
 
     suggested = max(blended, wage_floor)
 
+    # --- verified-GI premium ----------------------------------------------
+    gi = gi_service.verify(payload)
+    gi_verified = gi["matched"]
+    gi_premium_applied = False
+    if gi_verified:
+        suggested = int(round(suggested * GI_PREMIUM_MULTIPLIER))
+        gi_premium_applied = True
+
     # Price band around the final number, never dipping below the wage floor.
     min_price = max(wage_floor, int(round(suggested * 0.85)))
     max_price = int(round(suggested * 1.35))
@@ -164,6 +176,12 @@ def fair_price(payload: dict) -> dict:
            if wage_floor_applied
            else "— the suggested price already clears it.")
     )
+    if gi_premium_applied:
+        reasoning.append(
+            f"Verified GI premium (+{round((GI_PREMIUM_MULTIPLIER - 1) * 100)}%): "
+            f"{gi['name']} is a registered Geographical Indication from {gi['state']} — "
+            "priced above a generic equivalent."
+        )
     # Preserve the model's own reasoning bullets after our grounding notes.
     for bullet in data.get("reasoning", []):
         if bullet and bullet not in reasoning:
@@ -188,4 +206,6 @@ def fair_price(payload: dict) -> dict:
         "market_source": market_source,
         "wage_floor": wage_floor,
         "wage_floor_applied": wage_floor_applied,
+        "gi_verified": gi_verified,
+        "gi_premium_applied": gi_premium_applied,
     }

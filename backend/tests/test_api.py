@@ -202,6 +202,85 @@ def test_price_reports_grounding_fields_even_without_a_match():
     assert p["suggested_price"] >= p["wage_floor"]
 
 
+# --- GI verification -------------------------------------------------------
+
+
+def test_generate_listing_verifies_a_real_gi_craft():
+    """A Channapatna craft must verify against the registry (not just guess)."""
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": "Channapatna wooden spinning top toy set", "language": "en"},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    assert listing["gi_verified"] is True
+    assert "Channapatna" in listing["gi_registry_name"]
+    assert listing["gi_state"] == "Karnataka"
+
+
+def test_generate_listing_does_not_verify_a_generic_craft():
+    """An unrecognised craft is not a GI and must not be verified."""
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": "some craft we have never seen before", "language": "en"},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    assert listing["gi_verified"] is False
+    assert not listing["gi_registry_name"]
+
+
+def test_verified_gi_applies_a_price_premium():
+    """A verified GI is priced above a generic equivalent."""
+    p = _price(
+        title="Mysore Silk Saree",
+        material="Pure Mulberry Silk with Gold Zari",
+        category="Clothing / Ethnic Wear",
+        craft_technique="Traditional handloom weaving",
+        production_time="12 days",
+    )
+    assert p["gi_verified"] is True
+    assert p["gi_premium_applied"] is True
+    assert any("GI" in r for r in p["reasoning"])
+
+
+def test_generic_craft_has_no_gi_premium():
+    p = _price(
+        title="Handwoven Bamboo Storage Basket",
+        material="Natural Bamboo",
+        category="Home & Living / Storage",
+        production_time="3 days",
+    )
+    assert p["gi_verified"] is False
+    assert p["gi_premium_applied"] is False
+
+
+def test_verified_gi_persists_to_the_storefront():
+    """The green Verified GI badge must survive publish and render on /p/{id}."""
+    channapatna = {
+        **LISTING_FIXTURE,
+        "title": {"en": "Channapatna Wooden Toy Set", "hi": "चन्नापटना खिलौना", "kn": "ಚನ್ನಪಟ್ಟಣ ಆಟಿಕೆ"},
+        "material": "Ivory-wood with lac colours",
+        "craft_technique": "Lacquer-turnery (Channapatna)",
+        "category": "Toys & Games",
+        "gi_candidate": "Channapatna Toys (GI)",
+    }
+    body = client.post(
+        "/api/publish",
+        json={"listing": channapatna, "price": 897, "artisan_name": "Ravi", "location": "Channapatna"},
+    ).json()
+
+    page = client.get(f"/p/{body['listing_id']}").text
+    assert "Verified GI" in page
+    assert "Channapatna Toys and Dolls" in page
+    assert "Karnataka" in page
+
+    rows = client.get("/api/listings").json()
+    row = next(r for r in rows if r["listing_id"] == body["listing_id"])
+    assert row["gi_verified"] is True
+    assert row["gi_state"] == "Karnataka"
+
+
 # --- publish --------------------------------------------------------------
 
 

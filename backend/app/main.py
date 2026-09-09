@@ -39,7 +39,13 @@ from .schemas import (
     PublishRequest,
     PublishResponse,
 )
-from .services import gemini_service, image_service, ondc_service, pricing_service
+from .services import (
+    gemini_service,
+    gi_service,
+    image_service,
+    ondc_service,
+    pricing_service,
+)
 
 logging.basicConfig(level=logging.INFO)
 settings = get_settings()
@@ -124,7 +130,14 @@ async def enhance_image(file: UploadFile = File(...)):
 
 @app.post("/api/generate-listing")
 def generate_listing(req: GenerateListingRequest):
-    return gemini_service.generate_listing(req.transcript, req.language, req.image_b64)
+    listing = gemini_service.generate_listing(req.transcript, req.language, req.image_b64)
+    # Verify against the real GI registry — a registry match is stronger than
+    # the LLM's gi_candidate guess and earns the green "Verified GI" badge.
+    gi = gi_service.verify(listing)
+    listing["gi_verified"] = gi["matched"]
+    listing["gi_registry_name"] = gi["name"] or None
+    listing["gi_state"] = gi["state"] or None
+    return listing
 
 
 @app.post("/api/price", response_model=PriceResponse)
@@ -139,6 +152,13 @@ def publish(
     session: Session = Depends(get_session),
 ):
     listing = req.listing.model_dump()
+    # Re-verify server-side so a persisted "Verified GI" badge is always
+    # authoritative, never just whatever the client claimed.
+    gi = gi_service.verify(listing)
+    listing["gi_verified"] = gi["matched"]
+    listing["gi_registry_name"] = gi["name"] or None
+    listing["gi_state"] = gi["state"] or None
+
     catalog = ondc_service.build_ondc_catalog(listing, req.price, req.artisan_name, req.location)
     listing_id = catalog.pop("_listing_id")
 
@@ -183,6 +203,8 @@ def list_listings(
             price=row.price,
             category=row.category,
             gi_candidate=row.gi_candidate,
+            gi_verified=row.gi_verified,
+            gi_state=row.gi_state,
             has_image=bool(row.image_b64),
             image_url=f"{base}/api/listings/{row.id}/image",
             storefront_url=f"{base}/p/{row.id}",

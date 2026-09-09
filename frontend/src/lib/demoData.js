@@ -4,6 +4,27 @@
 
 export function demoListing(transcript = "") {
   const t = transcript.toLowerCase();
+  if (t.includes("channapatna") || t.includes("wooden toy") || t.includes("toy") || t.includes("आटिका") || t.includes("ಆಟಿಕೆ")) {
+    // A registry-verified GI, so the offline demo shows the green Verified GI badge.
+    return {
+      title: { en: "Channapatna Wooden Spinning Top Set", hi: "चन्नापटना लकड़ी का लट्टू सेट", kn: "ಚನ್ನಪಟ್ಟಣ ಮರದ ಬುಗುರಿ ಸೆಟ್" },
+      description: {
+        en: "A vibrant set of hand-turned wooden spinning tops made in the famed Channapatna tradition, coloured with safe natural lac dyes. Non-toxic and lovingly finished — a piece of Karnataka's toy-making heritage.",
+        hi: "प्रसिद्ध चन्नापटना परंपरा में हाथ से बने लकड़ी के लट्टुओं का जीवंत सेट, सुरक्षित प्राकृतिक लाख रंगों से रंगा। गैर-विषैला और प्यार से तैयार।",
+        kn: "ಪ್ರಸಿದ್ಧ ಚನ್ನಪಟ್ಟಣ ಸಂಪ್ರದಾಯದಲ್ಲಿ ಕೈಯಿಂದ ತಿರುಗಿಸಿದ ಮರದ ಬುಗುರಿಗಳ ಸೆಟ್, ಸುರಕ್ಷಿತ ನೈಸರ್ಗಿಕ ಅರಗಿನ ಬಣ್ಣ. ವಿಷರಹಿತ ಮತ್ತು ಪ್ರೀತಿಯಿಂದ ಸಿದ್ಧ.",
+      },
+      material: "Ivory-wood with natural lac colours",
+      category: "Toys & Games",
+      craft_technique: "Lacquer-turnery (Channapatna)",
+      production_time: "2 days",
+      dimensions: "Set of 4, 6–9 cm each",
+      tags: ["channapatna", "wooden-toys", "handmade", "non-toxic", "kids", "heritage"],
+      gi_candidate: "Channapatna Toys (GI)",
+      gi_verified: true,
+      gi_registry_name: "Channapatna Toys and Dolls",
+      gi_state: "Karnataka",
+    };
+  }
   if (t.includes("pottery") || t.includes("clay") || t.includes("vase") || t.includes("मिट्टी")) {
     return {
       title: { en: "Hand-thrown Terracotta Vase", hi: "हस्तनिर्मित टेराकोटा फूलदान", kn: "ಕೈಯಿಂದ ಮಾಡಿದ ಟೆರಾಕೋಟಾ ಹೂದಾನಿ" },
@@ -158,12 +179,14 @@ export function demoPublish(listing = {}, price = 749) {
 // Canned "My Products" rows for when the backend is unreachable. Shapes match
 // ListingSummary from the API so the grid renders identically either way.
 export function demoListings() {
-  const mk = (id, title, price, category) => ({
+  const mk = (id, title, price, category, gi = {}) => ({
     listing_id: id,
     title,
     price,
     category,
-    gi_candidate: null,
+    gi_candidate: gi.gi_candidate ?? null,
+    gi_verified: gi.gi_verified ?? false,
+    gi_state: gi.gi_state ?? null,
     has_image: false,
     image_url: "",
     storefront_url: `https://karigar.ai/p/${id}`,
@@ -171,7 +194,11 @@ export function demoListings() {
     _demo: true,
   });
   return [
-    mk("KARIGAR-DEMO0001", demoListing("bamboo basket").title, 749, "Home & Living / Storage"),
-    mk("KARIGAR-DEMO0002", demoListing("clay vase").title, 899, "Home & Living / Decor"),
+    mk("KARIGAR-DEMO0001", demoListing("bamboo basket").title, 1200, "Home & Living / Storage"),
+    mk("KARIGAR-DEMO0002", demoListing("clay vase").title, 1600, "Home & Living / Decor"),
+    mk("KARIGAR-DEMO0003", demoListing("channapatna toy").title, 897, "Toys & Games", {
+      gi_verified: true,
+      gi_state: "Karnataka",
+    }),
   ];
 }

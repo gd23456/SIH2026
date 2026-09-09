@@ -34,8 +34,13 @@ function ProductCard({ row, lang }) {
           </span>
           <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[10px]">● {t("live", lang)}</span>
         </div>
-        {row.gi_candidate && (
-          <span className="chip mt-2 !py-0.5 text-[10px]">🏷️ {row.gi_candidate}</span>
+        {row.gi_verified ? (
+          <span className="inline-flex items-center gap-1 mt-2 rounded-full bg-leaf/15 px-2 py-0.5 text-[10px] font-bold text-leaf">
+            ✓ {t("verifiedGi", lang)}
+            {row.gi_state && <span className="font-normal opacity-80">· {row.gi_state}</span>}
+          </span>
+        ) : (
+          row.gi_candidate && <span className="chip mt-2 !py-0.5 text-[10px]">🏷️ {row.gi_candidate}</span>
         )}
       </div>
     </div>

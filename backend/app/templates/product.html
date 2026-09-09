@@ -40,6 +40,9 @@
         border:1px solid var(--green);border-radius:999px;padding:2px 9px}
   .gi{display:inline-block;font-size:12px;font-weight:600;color:var(--brand);
       border:1px solid var(--brand);border-radius:999px;padding:2px 9px;margin-top:8px}
+  .gi-verified{display:inline-block;font-size:12px;font-weight:700;color:#fff;
+      background:var(--green);border:1px solid var(--green);border-radius:999px;
+      padding:3px 11px;margin-top:8px}
   p.desc{margin:10px 0 0}
   p.desc + p.desc{margin-top:8px;color:var(--muted);font-size:15px}
   dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
@@ -88,8 +91,10 @@
       <span class="fair">Fair price · labour-cost floor applied</span>
     </div>
 
-    {% if listing.gi_candidate %}
-      <span class="gi">🏷️ {{ listing.gi_candidate }}</span>
+    {% if listing.gi_verified %}
+      <span class="gi-verified">✓ Verified GI · {{ listing.gi_registry_name }}{% if listing.gi_state %} ({{ listing.gi_state }}){% endif %}</span>
+    {% elif listing.gi_candidate %}
+      <span class="gi">🏷️ Possible GI: {{ listing.gi_candidate }}</span>
     {% endif %}
 
     {% if listing.description_en %}<p class="desc">{{ listing.description_en }}</p>{% endif %}
