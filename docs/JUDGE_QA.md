@@ -10,19 +10,32 @@ better than a claim that collapses under one follow-up question.
 
 ## The three you will definitely get
 
-### "How do you know ₹749 is a fair price?"
+### "How do you know that price is fair?"
 
-> "Three inputs. A labour floor from the production time she told us — the
-> price can never fall below her own labour cost. A market band from
-> comparable listings in that category. And a skill premium for the
-> technique. The AI blends them, and it shows her the breakdown, so she can
-> disagree with any line of it.
+> "Three grounded inputs, and it shows her the breakdown so she can disagree
+> with any line of it.
 >
-> The point isn't that the number is perfect. It's that today nobody tells
-> her anything at all — a middleman just names a price. This gives her a
-> defensible starting position."
+> One — a **market median** from real comparable listings in that category;
+> for a bamboo basket that's ₹720 across 34 observed listings.
+>
+> Two — a **fair-wage floor**: the production time she told us, times a fair
+> daily wage. Three days of skilled work is ₹1,200, and the price *cannot* go
+> below that. That's the important one — it means the engine will never let
+> her sell her own labour below cost, which is the single most common way
+> artisans get exploited.
+>
+> Three — a **skill premium**, and for a verified-GI craft a documented +15%
+> on top, because a verified Channapatna toy should not be priced like a
+> generic wooden toy.
+>
+> The point isn't that the number is perfect. Today nobody tells her anything
+> at all — a middleman just names a price. This gives her a defensible starting
+> position, grounded in comparable listings and her own labour cost."
 
-*(Post Phase 2A, add: "grounded in N comparable listings we've collected.")*
+**Why can the fair price come out *above* the market median?** That's the
+feature, not a bug. If three days of skilled labour is worth ₹1,200 and the
+market only pays ₹720, the market is underpaying — and the floor says so out
+loud. We'd rather defend a fair number than a cheap one.
 
 ### "Are you actually publishing to ONDC?"
 

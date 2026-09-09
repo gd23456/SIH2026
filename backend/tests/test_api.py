@@ -101,6 +101,23 @@ def test_generate_listing_is_keyword_aware(transcript, expect_keyword):
     assert expect_keyword in blob
 
 
+@pytest.mark.parametrize("language", ["ta", "te", "bn", "mr", "gu", "or"])
+def test_generate_listing_carries_the_chosen_language(language):
+    """A listing generated in one of the six extra languages must carry that
+    language populated, not silently fall back to raw English."""
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": "Handmade bamboo basket", "language": language},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    # en/hi/kn always present
+    assert {"en", "hi", "kn"} <= listing["title"].keys()
+    # the chosen language is present and not identical to English
+    assert listing["title"].get(language, "").strip()
+    assert listing["title"][language] != listing["title"]["en"]
+
+
 def test_generate_listing_handles_unknown_craft():
     """An unmatched transcript must still produce a well-formed listing."""
     r = client.post(
@@ -138,6 +155,147 @@ def test_price_returns_sane_numbers_and_reasoning():
     assert p["breakdown"], "price must always come with a breakdown"
     for row in p["breakdown"]:
         assert {"label", "amount"} <= row.keys()
+
+
+# --- grounded fair-price engine -------------------------------------------
+
+
+def _price(**payload) -> dict:
+    r = client.post("/api/price", json=payload)
+    assert r.status_code == 200
+    return r.json()
+
+
+def test_price_is_grounded_against_a_market_comparable():
+    """A recognisable craft must surface an observed market band."""
+    p = _price(
+        title="Handwoven Bamboo Storage Basket",
+        material="Natural Bamboo",
+        category="Home & Living / Storage",
+        craft_technique="Traditional hand-weaving",
+        production_time="3 days",
+    )
+    assert p["market_median"] > 0, "bamboo storage should match a comparable"
+    assert p["market_sample_count"] > 0
+    assert p["market_source"]
+    # the market note / reasoning must actually cite the comparable
+    assert any("median" in r.lower() for r in p["reasoning"])
+
+
+def test_price_never_falls_below_the_fair_wage_floor():
+    """The social-impact guarantee: price ≥ labour_days × DAILY_FAIR_WAGE."""
+    from app.services.pricing_service import DAILY_FAIR_WAGE
+
+    # A long production time forces a high wage floor that must bind.
+    p = _price(
+        title="Simple cotton pouch",
+        material="Cotton",
+        category="Textiles",
+        production_time="30 days",
+    )
+    expected_floor = 30 * DAILY_FAIR_WAGE
+    assert p["wage_floor"] == expected_floor
+    assert p["suggested_price"] >= p["wage_floor"]
+    assert p["suggested_price"] >= expected_floor
+    assert p["wage_floor_applied"] is True
+    assert p["min_price"] >= p["wage_floor"]
+
+
+def test_price_breakdown_sums_to_suggested_price():
+    p = _price(
+        title="Hand-thrown Terracotta Vase",
+        material="Terracotta Clay",
+        category="Home & Living / Decor",
+        production_time="4 days",
+    )
+    assert sum(b["amount"] for b in p["breakdown"]) == p["suggested_price"]
+    assert p["min_price"] <= p["suggested_price"] <= p["max_price"]
+
+
+def test_price_reports_grounding_fields_even_without_a_match():
+    """An unknown craft still gets the fair-wage floor and a default band."""
+    p = _price(title="mysterious artefact", material="unknown", production_time="2 days")
+    assert "wage_floor" in p and "wage_floor_applied" in p
+    assert p["suggested_price"] >= p["wage_floor"]
+
+
+# --- GI verification -------------------------------------------------------
+
+
+def test_generate_listing_verifies_a_real_gi_craft():
+    """A Channapatna craft must verify against the registry (not just guess)."""
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": "Channapatna wooden spinning top toy set", "language": "en"},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    assert listing["gi_verified"] is True
+    assert "Channapatna" in listing["gi_registry_name"]
+    assert listing["gi_state"] == "Karnataka"
+
+
+def test_generate_listing_does_not_verify_a_generic_craft():
+    """An unrecognised craft is not a GI and must not be verified."""
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": "some craft we have never seen before", "language": "en"},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    assert listing["gi_verified"] is False
+    assert not listing["gi_registry_name"]
+
+
+def test_verified_gi_applies_a_price_premium():
+    """A verified GI is priced above a generic equivalent."""
+    p = _price(
+        title="Mysore Silk Saree",
+        material="Pure Mulberry Silk with Gold Zari",
+        category="Clothing / Ethnic Wear",
+        craft_technique="Traditional handloom weaving",
+        production_time="12 days",
+    )
+    assert p["gi_verified"] is True
+    assert p["gi_premium_applied"] is True
+    assert any("GI" in r for r in p["reasoning"])
+
+
+def test_generic_craft_has_no_gi_premium():
+    p = _price(
+        title="Handwoven Bamboo Storage Basket",
+        material="Natural Bamboo",
+        category="Home & Living / Storage",
+        production_time="3 days",
+    )
+    assert p["gi_verified"] is False
+    assert p["gi_premium_applied"] is False
+
+
+def test_verified_gi_persists_to_the_storefront():
+    """The green Verified GI badge must survive publish and render on /p/{id}."""
+    channapatna = {
+        **LISTING_FIXTURE,
+        "title": {"en": "Channapatna Wooden Toy Set", "hi": "चन्नापटना खिलौना", "kn": "ಚನ್ನಪಟ್ಟಣ ಆಟಿಕೆ"},
+        "material": "Ivory-wood with lac colours",
+        "craft_technique": "Lacquer-turnery (Channapatna)",
+        "category": "Toys & Games",
+        "gi_candidate": "Channapatna Toys (GI)",
+    }
+    body = client.post(
+        "/api/publish",
+        json={"listing": channapatna, "price": 897, "artisan_name": "Ravi", "location": "Channapatna"},
+    ).json()
+
+    page = client.get(f"/p/{body['listing_id']}").text
+    assert "Verified GI" in page
+    assert "Channapatna Toys and Dolls" in page
+    assert "Karnataka" in page
+
+    rows = client.get("/api/listings").json()
+    row = next(r for r in rows if r["listing_id"] == body["listing_id"])
+    assert row["gi_verified"] is True
+    assert row["gi_state"] == "Karnataka"
 
 
 # --- publish --------------------------------------------------------------
@@ -341,6 +499,36 @@ def test_listing_image_serves_a_png():
     assert r.status_code == 200
     assert r.headers["content-type"] == "image/png"
     Image.open(io.BytesIO(r.content)).verify()
+
+
+# --- buyer-side search ------------------------------------------------------
+
+
+def test_search_finds_a_published_item_by_title_word():
+    """The buyer beat: publish, then find that exact item in a search."""
+    body = _publish(price=749)
+    rows = client.get("/api/search?q=bamboo").json()
+    assert any(r["listing_id"] == body["listing_id"] for r in rows)
+    for r in rows:
+        assert r["storefront_url"].endswith(f"/p/{r['listing_id']}")
+        assert "image_url" in r
+
+
+def test_search_matches_category_and_tags():
+    _publish(price=749)
+    assert client.get("/api/search?q=storage").json(), "should match category"
+    assert client.get("/api/search?q=handmade").json(), "should match a tag"
+
+
+def test_search_empty_query_returns_recent_catalog():
+    _publish(price=749)
+    rows = client.get("/api/search?q=").json()
+    assert isinstance(rows, list) and rows
+
+
+def test_search_miss_returns_empty_list():
+    rows = client.get("/api/search?q=zzzznowaythisexists").json()
+    assert rows == []
 
 
 def test_listing_image_404s_without_a_photo():

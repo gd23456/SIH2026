@@ -74,6 +74,26 @@ there's no wifi, the app still demos. **Demo mode is our stage insurance.**
 
 ---
 
+## Seed demo data (so the shelf is never empty on stage)
+
+"My Products" and the Buyer view read from the database. On a fresh clone they
+start empty. Seed a few realistic listings — bamboo basket, Channapatna toys
+(verified GI), Mysore silk (verified GI), terracotta vase — so both screens
+have something to show before you publish live:
+
+```bash
+cd backend
+python scripts/seed_demo.py           # add the demo listings
+python scripts/seed_demo.py --reset   # wipe first, then add (idempotent re-seed)
+```
+
+It runs the same path a real publish does (mock listing → GI verification →
+grounded fair-price → ONDC id) and writes straight to the app's database, so
+no server needs to be running. Seed once, then start the backend and the
+products are already there.
+
+---
+
 ## Getting a Gemini key (optional)
 
 1. <https://aistudio.google.com/app/apikey> → Create API key (free tier)
@@ -180,6 +200,28 @@ cd frontend && VITE_API_BASE=http://192.168.1.42:8000 npm run build && npx cap s
 isolation enabled, which silently blocks this — use a phone hotspot.
 
 ---
+
+### Building the Android app / a debug APK
+
+The web build must be synced into the native project first:
+
+```bash
+cd frontend
+npm run build          # emits dist/ + the PWA service worker
+npx cap sync android   # copies dist/ into android/app/src/main/assets
+npx cap open android   # open in Android Studio (Run ▶ to a device/emulator)
+```
+
+To produce a shareable **debug APK** without Android Studio:
+
+```bash
+cd frontend/android
+./gradlew assembleDebug
+# → app/build/outputs/apk/debug/app-debug.apk
+```
+
+Install it with `adb install app-debug.apk`, or attach it to a GitHub Release
+so anyone can side-load it.
 
 ### Gradle build fails
 

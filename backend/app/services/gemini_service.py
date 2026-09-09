@@ -16,7 +16,12 @@ from ..config import get_settings
 
 log = logging.getLogger("karigar.gemini")
 
-_LANG_NAME = {"en": "English", "hi": "Hindi", "kn": "Kannada"}
+_LANG_NAME = {
+    "en": "English", "hi": "Hindi", "kn": "Kannada", "ta": "Tamil",
+    "te": "Telugu", "bn": "Bengali", "mr": "Marathi", "gu": "Gujarati", "or": "Odia",
+}
+# Languages every listing always carries.
+_ALWAYS = ("en", "hi", "kn")
 
 # Model names move faster than hackathons do. If the configured model isn't
 # available on a teammate's key, we walk down this list rather than silently
@@ -93,8 +98,8 @@ Their words: "{transcript}"
 Produce a polished, marketplace-ready product listing. Return STRICT JSON only,
 no markdown, with exactly this shape:
 {{
-  "title": {{"en": "...", "hi": "...", "kn": "..."}},
-  "description": {{"en": "...", "hi": "...", "kn": "..."}},
+  "title": {{{title_shape}}},
+  "description": {{{title_shape}}},
   "material": "...",
   "category": "...",
   "craft_technique": "...",
@@ -107,7 +112,7 @@ no markdown, with exactly this shape:
 Rules:
 - Titles: 4-8 words, appealing, specific.
 - Descriptions: 2-3 warm sentences highlighting handmade quality, materials and heritage.
-- Translate title AND description faithfully into English, Hindi and Kannada.
+- Translate title AND description faithfully into these languages: {lang_list}.
 - "gi_candidate": if the craft clearly matches a known Indian Geographical Indication
   (e.g. "Channapatna Toys", "Mysore Silk", "Blue Pottery of Jaipur"), put its name; else null.
 - tags: 5-7 lowercase keywords useful for marketplace search.
@@ -151,10 +156,20 @@ def generate_listing(transcript: str, language: str = "en", image_b64: str | Non
         if image_b64
         else "No photo provided; infer sensible details from the description."
     )
+    # Always en/hi/kn, plus the artisan's own language when it's one of the
+    # extra six — so the listing speaks their tongue too.
+    langs = list(_ALWAYS)
+    if language in _LANG_NAME and language not in langs:
+        langs.append(language)
+    title_shape = ", ".join(f'"{code}": "..."' for code in langs)
+    lang_list = ", ".join(f"{_LANG_NAME[c]} ({c})" for c in langs)
+
     prompt = _LISTING_PROMPT.format(
         lang=_LANG_NAME.get(language, "the local language"),
         transcript=transcript,
         image_hint=image_hint,
+        title_shape=title_shape,
+        lang_list=lang_list,
     )
     parts: list = [prompt]
     if image_b64:
@@ -165,7 +180,7 @@ def generate_listing(transcript: str, language: str = "en", image_b64: str | Non
 
     text = _generate(parts)
     if text is None:
-        return mock_data.mock_listing(transcript)
+        return mock_data.mock_listing(transcript, language)
     try:
         data = _extract_json(text)
         # keep the internal base-price hint out of the public API contract
@@ -173,7 +188,7 @@ def generate_listing(transcript: str, language: str = "en", image_b64: str | Non
         return data
     except Exception as e:
         log.warning("generate_listing could not parse model JSON, using mock: %s", e)
-        return mock_data.mock_listing(transcript)
+        return mock_data.mock_listing(transcript, language)
 
 
 def estimate_price(payload: dict) -> dict:

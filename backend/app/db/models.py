@@ -45,6 +45,10 @@ class Listing(SQLModel, table=True):
     production_time: str = ""
     dimensions: str = ""
     gi_candidate: str | None = None
+    # Registry-verified GI (see gi_service). gi_verified drives the green badge.
+    gi_verified: bool = False
+    gi_registry_name: str | None = None
+    gi_state: str | None = None
     tags_json: str = "[]"
 
     price: int = 0

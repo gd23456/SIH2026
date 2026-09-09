@@ -72,9 +72,18 @@ point.
 > "And the AI wrote the whole listing. Title, description, material, category,
 > production time, search tags — in **Kannada, Hindi and English** at once."
 
-Toggle the language. **Let them see the same product in three scripts.**
+Toggle the language. **Let them see the same product in three scripts.** (The
+grid offers **nine** languages — Tamil, Telugu, Bengali, Marathi, Gujarati and
+Odia too — so say *"national, not just Karnataka."*)
 
 > "One artisan just became sellable to the entire country."
+
+**If you demo a Channapatna toy or a Mysore silk saree**, point at the green
+**✓ Verified GI** badge:
+
+> "That's not the AI guessing. We matched it against the real Geographical
+> Indication registry — this is a *verified* GI craft. The Ministry of Textiles
+> protects exactly these."
 
 ---
 
@@ -83,9 +92,16 @@ Toggle the language. **Let them see the same product in three scripts.**
 > "Now the part that actually changes her income. Most artisans underprice —
 > they don't know what the market pays."
 
-> "₹749. And it explains why: materials, labour, skill premium, market
-> comparables. She can see the reasoning, so she can argue with it. This is
-> the number a middleman was never going to tell her."
+> "The engine is grounded in three things: a **market median** across real
+> comparable listings, a **skill premium**, and — the important one — a
+> **fair-wage floor**. Three days of skilled work at a fair daily wage is
+> ₹1,200, so the price *cannot* fall below that. The market pays a median of
+> ₹720 for these baskets; our floor refuses to let her sell her own labour that
+> cheap. She sees every line, so she can argue with it. This is the number a
+> middleman was never going to tell her."
+
+*(For a verified-GI craft, also point out the **+15% GI premium** line — "a
+verified Channapatna toy is not priced like a generic wooden toy.")*
 
 ---
 
@@ -104,6 +120,17 @@ Tap **Publish to ONDC**.
 for an item that did not exist ninety seconds ago.*
 
 **This is the moment. Stop talking and let it land.**
+
+---
+
+### Step 6 (optional beat) — The buyer side · 10 seconds
+
+Tap **🛒 Buyer view**. The chrome turns into a buyer app on the ONDC network.
+Search for a word from the item you just published — **it's right there.**
+
+> "And here's the other half. The same network she just published to — this is
+> what a *buyer* sees. She published thirty seconds ago; a buyer can already
+> find her. Seller and buyer, one network, on one phone."
 
 ---
 
@@ -136,7 +163,8 @@ run"* and keep the energy up. Judges remember composure.
 
 Full prep in [JUDGE_QA.md](JUDGE_QA.md). The three that always come:
 
-1. **"How do you know ₹749 is fair?"** → the grounded comparables engine
+1. **"How do you know that price is fair?"** → the grounded comparables engine
+   (market median + skill premium + fair-wage floor), see [JUDGE_QA.md](JUDGE_QA.md)
 2. **"Are you actually on ONDC?"** → be honest: schema-correct payload, BPP
    registration is the next step. *Never overclaim this to an ONDC judge.*
 3. **"How does an artisan find this app?"** → SHGs, artisan co-operatives, and

@@ -43,13 +43,31 @@ language. Karigar AI does the rest.
 | | Step | What the AI does |
 |---|---|---|
 | 📷 | **Photo** | Removes the cluttered background, composites onto a studio backdrop, corrects lighting — a catalog-grade shot from a workshop phone snap |
-| 🎙️ | **Voice** | Listens in Hindi / Kannada / English. No typing, no forms, no English required |
-| 🤖 | **Listing** | Writes title, description, material, category, technique, dimensions and search tags — **in all three languages at once** |
-| 💰 | **Fair price** | Suggests a price **and explains why**: materials, labour, skill premium, market position. The artisan can argue with the reasoning |
-| 🚀 | **Publish** | Emits a real **ONDC RET10** catalog payload + a shareable WhatsApp link |
+| 🎙️ | **Voice** | Listens in **9 Indian languages**. No typing, no forms, no English required |
+| 🤖 | **Listing** | Writes title, description, material, category, technique, dimensions and search tags — always in English + Hindi + Kannada, plus the artisan's own language |
+| ✓ | **Verified GI** | Matches the craft against the real **Geographical Indication registry** (~160 registered GIs). A verified match ≠ an LLM guess — it earns a green badge and a price premium |
+| 💰 | **Fair price** | A **grounded** number: a market median from comparable listings, a skill premium, and a **fair-wage floor** it can never price below. Shows every line so the artisan can argue with it |
+| 🚀 | **Publish** | Emits a real **ONDC RET10** catalog payload + a shareable WhatsApp link, and a scannable QR to the live storefront |
+| 🛒 | **Buyer view** | The other side of the network: search the published catalogue and find the item the artisan just created |
 
 **Result:** an artisan who has never typed a word of English is sellable
 nationwide, in about ninety seconds.
+
+<!-- TODO(demo): drop the 90-second demo GIF here before submission -->
+<!-- ![Karigar AI — 90-second flow](docs/assets/demo.gif) -->
+
+> 📸 **Screenshots & demo GIF:** _coming before submission_ — place them under
+> `docs/assets/` and link them here (Welcome · Photo before/after · Listing in
+> 3 scripts · Verified GI badge · Grounded price · QR storefront · Buyer view).
+
+### Phase 2 — defensible differentiators
+
+| Feature | Why it matters | Offline? |
+|---|---|---|
+| **Grounded fair-price engine** | Answers *"how do you know that price is fair?"* — market median × skill premium × a fair-wage floor that protects the artisan's labour cost | ✅ |
+| **Registry-verified GI tags** | ~160 real Indian GIs; a *verified* Channapatna/Mysore-silk badge the Ministry of Textiles recognises, plus a documented +15% premium | ✅ |
+| **Buyer-side ONDC view** | Closes the story visually: seller → network → buyer, on one phone | ✅ |
+| **9 languages + offline PWA** | Tamil, Telugu, Bengali, Marathi, Gujarati, Odia on top of en/hi/kn; the app shell is precached and opens with no network | ✅ |
 
 ---
 
@@ -161,10 +179,11 @@ curl http://localhost:8000/api/health
 ┌──────────────────────▼───────────────────────────────────┐
 │  FastAPI backend                                         │
 │   POST /api/enhance-image    → rembg U²-Net + PIL        │
-│   POST /api/generate-listing → Gemini vision (3 langs)   │
-│   POST /api/price            → Gemini + fair-price rules │
+│   POST /api/generate-listing → Gemini vision + GI verify │
+│   POST /api/price            → grounded fair-price engine│
 │   POST /api/publish          → ONDC:RET10 + saved to db  │
 │   GET  /api/listings         → the artisan's catalogue   │
+│   GET  /api/search?q=        → buyer-side catalogue search│
 │   GET  /p/{id}               → public storefront page    │
 │   GET  /api/qr/{id}          → QR PNG for that page      │
 │   GET  /api/health           → which mode am I in?       │
@@ -186,10 +205,12 @@ Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 │   │   ├── main.py           routes
 │   │   ├── config.py         env settings, mock/live decision
 │   │   ├── schemas.py        Pydantic contracts
-│   │   ├── mock_data.py      keyword-aware offline AI
+│   │   ├── mock_data.py      keyword-aware offline AI (9 languages)
+│   │   ├── data/             comparables.json · gi_registry.json
 │   │   ├── db/               SQLModel tables + repository
 │   │   ├── templates/        server-rendered storefront page
-│   │   └── services/         gemini · image · pricing · ondc
+│   │   └── services/         gemini · image · pricing · gi · ondc
+│   ├── scripts/seed_demo.py  stock the shelf for a live demo
 │   ├── tests/                API contract tests (run in mock mode)
 │   ├── requirements.txt      core — always installs cleanly
 │   └── requirements-ai.txt   optional heavy vision deps
@@ -211,12 +232,13 @@ ONDC and Ministry of Textiles people.
 | Component | Status |
 |---|---|
 | Background removal + studio lighting | ✅ Real (rembg U²-Net) |
-| Multilingual listing generation | ✅ Real (Gemini vision, en/hi/kn) |
+| Multilingual listing generation | ✅ Real (Gemini vision) — **9 languages** |
 | Voice input | ✅ Real (Web Speech + native Android) |
-| Offline mock fallback | ✅ Real, and genuinely tested |
-| Price reasoning | ⚠️ Real LLM call — **not yet grounded in market data** |
+| Offline mock fallback + PWA shell | ✅ Real, and genuinely tested |
+| Grounded fair-price engine | ✅ Real — market comparables + skill premium + **fair-wage floor**; every signal shown |
+| GI-tag verification | ✅ Real — fuzzy-matched against a **~160-entry registered-GI registry** (distinct from the LLM guess), feeds a +15% premium |
+| Buyer-side ONDC search | ✅ Real (`GET /api/search`, buyer view screen) |
 | ONDC catalog | ⚠️ **Schema-correct payload, not yet POSTed to a live BPP.** Registration is an organisational step, not a technical one |
-| GI-tag detection | ⚠️ LLM guess; registry verification planned |
 | Persistence + public storefront | ✅ Real (SQLite; `GET /p/{id}` + QR, served offline over the laptop hotspot) |
 
 We do **not** claim to be live on ONDC. See [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -229,7 +251,7 @@ We do **not** claim to be live on ONDC. See [docs/ROADMAP.md](docs/ROADMAP.md).
 |---|---|
 | **Real need** | 7M+ artisans; middlemen take up to 60%. The barrier is photography, language and pricing — not craft quality |
 | **Clear government buyer** | Development Commissioner (Handicrafts), Ministry of Textiles, Ministry of MSME, **ONDC** |
-| **Differentiation** | Voice-first, native-language, **seller-side** AI + open-network distribution |
+| **Differentiation** | Voice-first, 9-language, **seller-side** AI · grounded fair pricing · registry-verified GI · buyer-side ONDC view — all working offline |
 | **Social impact** | The price engine has a **labour-cost floor** — it cannot suggest a price below what the artisan's time is worth |
 | **Buildable** | Runs today, on a laptop, with no API key |
 | **Startup potential** | *"Shopify + ONDC for artisans, where the AI does the difficult part"* |

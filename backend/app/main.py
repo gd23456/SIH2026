@@ -35,10 +35,17 @@ from .schemas import (
     GenerateListingRequest,
     ListingSummary,
     PriceRequest,
+    PriceResponse,
     PublishRequest,
     PublishResponse,
 )
-from .services import gemini_service, image_service, ondc_service, pricing_service
+from .services import (
+    gemini_service,
+    gi_service,
+    image_service,
+    ondc_service,
+    pricing_service,
+)
 
 logging.basicConfig(level=logging.INFO)
 settings = get_settings()
@@ -123,10 +130,17 @@ async def enhance_image(file: UploadFile = File(...)):
 
 @app.post("/api/generate-listing")
 def generate_listing(req: GenerateListingRequest):
-    return gemini_service.generate_listing(req.transcript, req.language, req.image_b64)
+    listing = gemini_service.generate_listing(req.transcript, req.language, req.image_b64)
+    # Verify against the real GI registry — a registry match is stronger than
+    # the LLM's gi_candidate guess and earns the green "Verified GI" badge.
+    gi = gi_service.verify(listing)
+    listing["gi_verified"] = gi["matched"]
+    listing["gi_registry_name"] = gi["name"] or None
+    listing["gi_state"] = gi["state"] or None
+    return listing
 
 
-@app.post("/api/price")
+@app.post("/api/price", response_model=PriceResponse)
 def price(req: PriceRequest):
     return pricing_service.fair_price(req.model_dump())
 
@@ -138,6 +152,13 @@ def publish(
     session: Session = Depends(get_session),
 ):
     listing = req.listing.model_dump()
+    # Re-verify server-side so a persisted "Verified GI" badge is always
+    # authoritative, never just whatever the client claimed.
+    gi = gi_service.verify(listing)
+    listing["gi_verified"] = gi["matched"]
+    listing["gi_registry_name"] = gi["name"] or None
+    listing["gi_state"] = gi["state"] or None
+
     catalog = ondc_service.build_ondc_catalog(listing, req.price, req.artisan_name, req.location)
     listing_id = catalog.pop("_listing_id")
 
@@ -162,6 +183,22 @@ def publish(
     )
 
 
+def _summary(row, base: str) -> ListingSummary:
+    return ListingSummary(
+        listing_id=row.id,
+        title={"en": row.title_en, "hi": row.title_hi, "kn": row.title_kn},
+        price=row.price,
+        category=row.category,
+        gi_candidate=row.gi_candidate,
+        gi_verified=row.gi_verified,
+        gi_state=row.gi_state,
+        has_image=bool(row.image_b64),
+        image_url=f"{base}/api/listings/{row.id}/image",
+        storefront_url=f"{base}/p/{row.id}",
+        created_at=row.created_at,
+    )
+
+
 @app.get("/api/listings", response_model=list[ListingSummary])
 def list_listings(
     request: Request,
@@ -175,20 +212,25 @@ def list_listings(
     """
     limit = max(1, min(limit, 100))
     base = _base_url(request)
-    return [
-        ListingSummary(
-            listing_id=row.id,
-            title={"en": row.title_en, "hi": row.title_hi, "kn": row.title_kn},
-            price=row.price,
-            category=row.category,
-            gi_candidate=row.gi_candidate,
-            has_image=bool(row.image_b64),
-            image_url=f"{base}/api/listings/{row.id}/image",
-            storefront_url=f"{base}/p/{row.id}",
-            created_at=row.created_at,
-        )
-        for row in repo.recent_listings(session, limit=limit)
-    ]
+    return [_summary(row, base) for row in repo.recent_listings(session, limit=limit)]
+
+
+@app.get("/api/search", response_model=list[ListingSummary])
+def search(
+    request: Request,
+    q: str = "",
+    limit: int = 24,
+    session: Session = Depends(get_session),
+):
+    """Buyer-side search across the whole published catalog.
+
+    This is the buyer half of the story: an artisan publishes, then anyone on
+    the network can search and find that exact item. Same ListingSummary shape
+    as /api/listings so the buyer grid renders identically.
+    """
+    limit = max(1, min(limit, 100))
+    base = _base_url(request)
+    return [_summary(row, base) for row in repo.search_listings(session, q, limit=limit)]
 
 
 @app.get("/api/listings/{listing_id}/image")

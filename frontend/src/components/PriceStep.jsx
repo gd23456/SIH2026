@@ -38,6 +38,17 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
       <div className="card p-6 mt-4 text-center">
         <p className="text-clay-500 text-sm">{t("suggested", lang)}</p>
         <div className="text-5xl font-extrabold text-clay-800 mt-1">₹{price.toLocaleString("en-IN")}</div>
+
+        {data.market_median > 0 && (
+          <p className="text-sm text-clay-600 mt-2">
+            📊 {t("marketMedianLabel", lang)}{" "}
+            <span className="font-semibold">₹{data.market_median.toLocaleString("en-IN")}</span>
+            {data.market_sample_count > 0 && (
+              <> · {data.market_sample_count} {t("comparableListings", lang)}</>
+            )}
+          </p>
+        )}
+
         <input
           type="range"
           min={data.min_price}
@@ -50,6 +61,19 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
           <span>₹{data.min_price.toLocaleString("en-IN")}</span>
           <span>₹{data.max_price.toLocaleString("en-IN")}</span>
         </div>
+
+        {data.wage_floor_applied && (
+          <div className="mt-4 flex items-start gap-2 rounded-2xl bg-leaf/10 px-3 py-2.5 text-left">
+            <span className="text-leaf text-base leading-none mt-0.5">🛡️</span>
+            <p className="text-[13px] leading-snug text-clay-700 font-medium">{t("wageProtected", lang)}</p>
+          </div>
+        )}
+        {data.gi_premium_applied && (
+          <div className="mt-3 flex items-start gap-2 rounded-2xl bg-haldi/15 px-3 py-2.5 text-left">
+            <span className="text-base leading-none mt-0.5">✓</span>
+            <p className="text-[13px] leading-snug text-clay-800 font-medium">{t("giPremiumNote", lang)}</p>
+          </div>
+        )}
       </div>
 
       <div className="card p-5 mt-4">
