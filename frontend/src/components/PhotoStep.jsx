@@ -16,6 +16,11 @@ export default function PhotoStep({ lang, onDone, setSource }) {
       const r = await enhanceImage(file);
       setSource?.(getLastSource());
       setResult(r);
+    } catch (err) {
+      // Never leave the user staring at an empty step with no explanation:
+      // that is what happened on Android when the fallback itself threw.
+      console.error("photo step failed", err);
+      setSource?.("demo");
     } finally {
       setBusy(false);
     }

@@ -85,7 +85,24 @@ async function jfetch(path, opts = {}, timeoutMs = 12000) {
 
 /** Send an image File; get {original_b64, enhanced_b64, bg_removed}. */
 export async function enhanceImage(file) {
-  if (forcedDemo()) return demoEnhance(file);
+  // Read the file ONCE, before anything else touches it.
+  //
+  // On Android the photo picker hands us a one-shot content:// URI. Uploading
+  // it consumes the handle, so a fallback that re-reads the same File throws
+  // `ProgressEvent` from FileReader. That took down the demo path on device:
+  // the upload timed out, the fallback threw, the rejection went unhandled,
+  // and the photo step silently reset to empty with no error shown at all.
+  let b64 = null;
+  try {
+    b64 = await fileToB64(file);
+  } catch {
+    b64 = null;
+  }
+
+  if (forcedDemo()) {
+    _lastSource = "demo";
+    return demoEnhance(b64);
+  }
   try {
     const fd = new FormData();
     fd.append("file", file);
@@ -94,15 +111,15 @@ export async function enhanceImage(file) {
     return data;
   } catch (e) {
     _lastSource = "demo";
-    return demoEnhance(file);
+    return demoEnhance(b64);
   }
 }
 
 // Demo enhance: we can't cut the background client-side, so return the same
 // image for both and let the UI apply a CSS "studio" treatment on the after.
-async function demoEnhance(file) {
-  const b64 = await fileToB64(file);
-  return { original_b64: b64, enhanced_b64: b64, bg_removed: false, _demo: true };
+// Takes already-read base64 rather than the File — see enhanceImage above.
+function demoEnhance(b64) {
+  return { original_b64: b64 || "", enhanced_b64: b64 || "", bg_removed: false, _demo: true };
 }
 
 export async function generateListing({ transcript, language, image_b64 }) {
