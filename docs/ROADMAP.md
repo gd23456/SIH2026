@@ -41,45 +41,41 @@ page for an item that didn't exist 90 seconds ago.
 
 ---
 
-## 🎯 Phase 2 — Defensible differentiators
+## 🎯 Phase 2 — Defensible differentiators ✅ (shipped)
 
-All four are approved for build. Ordered by how directly they answer a
-question a judge will actually ask.
+All four are built. Ordered by how directly they answer a question a judge
+will actually ask.
 
-### 2A — Grounded Fair-Price engine · Lane: AI · ~8h
-Answers *"how do you know ₹749 is fair?"* — the question we WILL be asked.
+### 2A — Grounded Fair-Price engine · Lane: AI ✅
+Answers *"how do you know that price is fair?"* — the question we WILL be asked.
 
-- [ ] Curate `comparables.json`: category → observed price bands (source from
-      ONDC/Amazon/Etsy listings, cite the source count)
-- [ ] Blend: LLM estimate × market band × labour-hours floor
-- [ ] Add a **minimum fair wage floor** so the engine can never suggest a price
-      below the artisan's labour cost — this is the social-impact argument
-- [ ] UI: *"median ₹720 across 34 similar bamboo baskets"* beside the number
+- [x] Curate `comparables.json`: category → observed price bands (ONDC/Amazon/Etsy, with sample counts)
+- [x] Blend: LLM estimate × market band × labour-days wage floor
+- [x] Add a **minimum fair wage floor** (`labour_days × ₹400/day`) so the engine
+      can never suggest a price below the artisan's labour cost — the social-impact argument
+- [x] UI: *"median ₹720 across 34 comparable listings"* + a fair-wage-floor guarantee
 
-### 2B — Buyer-side ONDC view · Lane: Frontend · ~6h
+### 2B — Buyer-side ONDC view · Lane: Frontend ✅
 Closes the story visually: seller → network → buyer, on one screen.
 
-- [ ] `GET /api/search?q=` over published listings
-- [ ] A mini "buyer app" screen with ONDC-ish chrome
-- [ ] Demo beat: publish, then switch to buyer view and **find the item you
-      just created**
+- [x] `GET /api/search?q=` over published listings
+- [x] A mini "buyer app" screen with ONDC-ish chrome
+- [x] Demo beat: publish, then switch to buyer view and **find the item you just created**
 
-### 2C — GI-tag verification · Lane: AI · ~5h
+### 2C — GI-tag verification · Lane: AI ✅
 Ministry of Textiles judges will recognise this instantly.
 
-- [ ] `gi_registry.json` — ~200 real Indian GI crafts (name, state, category)
-- [ ] Fuzzy match listing → registry; verified match ≠ LLM guess
-- [ ] Show a **verified GI badge** with the registry entry, and feed it into
-      the price as a premium multiplier
+- [x] `gi_registry.json` — ~160 real Indian GI crafts (name, state, category)
+- [x] Fuzzy match (stdlib `difflib`) listing → registry; verified match ≠ LLM guess
+- [x] **Verified GI badge** (app + storefront) with the registry entry, feeding a +15% price premium
 
-### 2D — 6 more languages + offline PWA · Lane: i18n + Mobile · ~8h
+### 2D — 6 more languages + offline PWA · Lane: i18n + Mobile ✅
 Turns "a Karnataka app" into "a national solution."
 
-- [ ] Tamil, Bengali, Marathi, Odia, Telugu, Gujarati in `i18n.js`
-- [ ] Matching translations in `mock_data.py` and `LocalizedText`
-- [ ] Service worker: app shell cached, works with no network
-- [ ] Queue publishes made offline, sync when connectivity returns
-- [ ] Low-bandwidth mode: aggressive image compression
+- [x] Tamil, Bengali, Marathi, Odia, Telugu, Gujarati in `i18n.js` (9 total)
+- [x] Matching translations in `mock_data.py` and an extended `LocalizedText`
+- [x] Service worker (vite-plugin-pwa + Workbox): app shell cached, opens with no network
+- [ ] _Stretch, deferred:_ queue publishes made offline + low-bandwidth image compression
 
 ---
 
