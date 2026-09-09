@@ -10,11 +10,15 @@
 # ⚠️ KNOWN ISSUES — read before you panic:
 #
 #  1. Needs an onnxruntime wheel for your Python. Recent onnxruntime (1.20+)
-#     ships wheels for 3.11–3.13 (verified working on 3.13 with 1.24). Very new
+#     ships wheels for 3.11-3.13 (verified working on 3.13 with 1.24). Very new
 #     Python releases can still lag; if install fails, use 3.11. See docs/SETUP.md.
-#  2. First run downloads ~180MB of model weights to ~/.u2net/ — do this on
-#     good wifi BEFORE demo day, not at the venue.
-#  3. If it won't install, DON'T fight it. Skip this file. The demo works
+#  2. First run downloads ~180MB of u2net weights to ~/.rembg/models/ - do this
+#     on good wifi BEFORE demo day, not at the venue.
+#  3. image_service.py pins the u2net model and reuses one session. Bare
+#     rembg.remove() would pull bria-rmbg (~977MB, non-commercial) and reload
+#     it every request - ~30s per photo, which the Android client aborts at 25s.
+#     Don't undo that.
+#  4. If it won't install, DON'T fight it. Skip this file. The demo works
 #     fine without it and nobody watching can tell in 90 seconds.
 # ---------------------------------------------------------------------------
 

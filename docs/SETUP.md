@@ -178,10 +178,30 @@ cutting the object out. In a 90-second demo nobody notices.
 
 ### First image upload takes 30+ seconds
 
-rembg is downloading ~180MB of U²-Net weights to `~/.u2net/`. One-time.
+rembg is downloading ~180MB of U²-Net weights to `~/.rembg/models/u2net/`.
+One-time. (Older notes say `~/.u2net/` — rembg moved the cache. Set `U2NET_HOME`
+to force the old flat layout; that's what `docker-compose.yml` does so the
+`u2net-cache` volume keeps working.)
 
 **Do this on good wifi before demo day.** Upload one photo the night before so
 the weights are cached.
+
+After the first upload each photo takes ~1s. If every photo is taking ~30s,
+something has reset `_REMBG_MODEL` or dropped the cached session — see below.
+
+---
+
+### Every photo takes ~30 seconds, not just the first
+
+`image_service.py` pins `_REMBG_MODEL = "u2net"` and holds one `new_session()`
+for the life of the process. **Don't call `rembg.remove(img)` without passing
+that session.** Bare `remove()` defaults to the `bria-rmbg` model (~977MB) *and*
+builds a fresh session on every call, so it reloads a gigabyte of weights per
+photo. Measured on a dev laptop: 29.6s per photo vs 0.95s with the shared
+u2net session.
+
+`bria-rmbg` is also under a non-commercial licence, which is a problem for a
+project that pitches startup potential. U²-Net is Apache-2.0. Keep the pin.
 
 ---
 
