@@ -109,6 +109,53 @@ def test_generate_listing_handles_unknown_craft():
     assert r.json()["title"]["en"]
 
 
+def _script_counts(text: str, lo: str, hi: str) -> tuple[int, int]:
+    """(chars in the target script, ASCII letters) — for "is this really Hindi?"."""
+    target = sum(1 for ch in text if lo <= ch <= hi)
+    latin = sum(1 for ch in text if ch.isascii() and ch.isalpha())
+    return target, latin
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "handmade bamboo basket",
+        "clay terracotta vase",
+        "mysore silk saree",
+        "channapatna wooden toy",
+        "some craft we have never seen before",  # falls through to the default
+    ],
+)
+def test_generate_listing_is_actually_translated(transcript):
+    """hi/kn must be real Hindi/Kannada, not English wearing a language tag.
+
+    Mock mode is our stage fallback and "a listing in all three languages at
+    once" is the claim we make while showing this screen, so a non-empty check
+    is not enough — the text has to be in the right script.
+    """
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": transcript, "language": "en"},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+
+    for field in ("title", "description"):
+        en = listing[field]["en"]
+        hi = listing[field]["hi"]
+        kn = listing[field]["kn"]
+
+        assert hi != en, f"{field}.hi is identical to English"
+        assert kn != en, f"{field}.kn is identical to English"
+
+        # Not just "contains one translated word" — the target script has to
+        # outweigh the Latin text, or it is still English with a few nouns swapped.
+        deva, latin = _script_counts(hi, "ऀ", "ॿ")
+        assert deva > latin, f"{field}.hi is mostly Latin ({deva} Devanagari vs {latin} ASCII)"
+        knda, latin = _script_counts(kn, "ಀ", "೿")
+        assert knda > latin, f"{field}.kn is mostly Latin ({knda} Kannada vs {latin} ASCII)"
+
+
 # --- fair price -----------------------------------------------------------
 
 

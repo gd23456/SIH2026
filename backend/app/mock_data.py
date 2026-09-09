@@ -3,31 +3,22 @@
 The mock is keyword-aware: it reads the artisan's transcript and produces a
 plausible, well-formed listing. It is intentionally good enough to demo on
 stage if the network or key fails.
+
+Every craft carries hand-written `title_hi`/`title_kn`/`desc_hi`/`desc_kn`.
+These are real translations, not word substitution: mock mode is what we demo
+on when the wifi dies, and "multilingual listing" is the claim being made on
+stage, so the Hindi and Kannada text has to actually read as Hindi and Kannada.
 """
 from __future__ import annotations
 
 import re
 
-# Lightweight bilingual snippets used to fake multilingual generation.
-_HI = {
-    "Handwoven": "हस्तनिर्मित", "Handmade": "हस्तनिर्मित", "Bamboo": "बाँस",
-    "Basket": "टोकरी", "Pottery": "मिट्टी के बर्तन", "Vase": "फूलदान",
-    "Silk": "रेशम", "Saree": "साड़ी", "Wooden": "लकड़ी", "Toy": "खिलौना",
-    "Jute": "जूट", "Bag": "बैग", "Brass": "पीतल", "Lamp": "दीपक",
-    "Storage": "भंडारण", "Set": "सेट", "with": "के साथ",
-}
-_KN = {
-    "Handwoven": "ಕೈಮಗ್ಗ", "Handmade": "ಕೈಯಿಂದ ಮಾಡಿದ", "Bamboo": "ಬಿದಿರು",
-    "Basket": "ಬುಟ್ಟಿ", "Pottery": "ಮಣ್ಣಿನ ಪಾತ್ರೆ", "Vase": "ಹೂದಾನಿ",
-    "Silk": "ರೇಷ್ಮೆ", "Saree": "ಸೀರೆ", "Wooden": "ಮರದ", "Toy": "ಆಟಿಕೆ",
-    "Jute": "ಸೆಣಬು", "Bag": "ಚೀಲ", "Brass": "ಹಿತ್ತಾಳೆ", "Lamp": "ದೀಪ",
-    "Storage": "ಸಂಗ್ರಹ", "Set": "ಸೆಟ್", "with": "ಜೊತೆ",
-}
-
 CRAFTS = [
     {
         "keys": ["bamboo", "basket", "cane", "बाँस", "टोकरी", "ಬಿದಿರು", "ಬುಟ್ಟಿ"],
         "title": "Handwoven Bamboo Storage Basket",
+        "title_hi": "हस्तनिर्मित बाँस की भंडारण टोकरी",
+        "title_kn": "ಕೈಯಿಂದ ಹೆಣೆದ ಬಿದಿರಿನ ಸಂಗ್ರಹ ಬುಟ್ಟಿ",
         "material": "Natural Bamboo",
         "category": "Home & Living / Storage",
         "craft_technique": "Traditional hand-weaving",
@@ -36,11 +27,15 @@ CRAFTS = [
         "tags": ["handmade", "eco-friendly", "bamboo", "storage", "sustainable", "artisan"],
         "gi_candidate": None,
         "desc": "A beautifully handwoven storage basket crafted from natural bamboo by skilled rural artisans. Each basket is made over three days using traditional hand-weaving techniques passed down through generations. Durable, lightweight, and fully biodegradable — perfect for eco-conscious homes.",
+        "desc_hi": "कुशल ग्रामीण कारीगरों द्वारा प्राकृतिक बाँस से हाथ से बुनी गई एक सुंदर भंडारण टोकरी। हर टोकरी पीढ़ियों से चली आ रही पारंपरिक बुनाई तकनीकों से तीन दिनों में बनाई जाती है। टिकाऊ, हल्की और पूरी तरह जैव-अपघटनीय — पर्यावरण के प्रति सजग घरों के लिए एकदम सही।",
+        "desc_kn": "ನುರಿತ ಗ್ರಾಮೀಣ ಕುಶಲಕರ್ಮಿಗಳು ನೈಸರ್ಗಿಕ ಬಿದಿರಿನಿಂದ ಕೈಯಿಂದ ಹೆಣೆದ ಸುಂದರವಾದ ಸಂಗ್ರಹ ಬುಟ್ಟಿ. ಪ್ರತಿ ಬುಟ್ಟಿಯನ್ನೂ ತಲೆಮಾರುಗಳಿಂದ ಬಂದ ಸಾಂಪ್ರದಾಯಿಕ ಹೆಣಿಗೆ ತಂತ್ರಗಳಿಂದ ಮೂರು ದಿನಗಳಲ್ಲಿ ತಯಾರಿಸಲಾಗುತ್ತದೆ. ಬಾಳಿಕೆ ಬರುವ, ಹಗುರವಾದ ಮತ್ತು ಸಂಪೂರ್ಣ ಜೈವಿಕ ವಿಘಟನೀಯ — ಪರಿಸರ ಪ್ರಜ್ಞೆಯ ಮನೆಗಳಿಗೆ ಸೂಕ್ತ.",
         "base_price": 749,
     },
     {
         "keys": ["pottery", "clay", "terracotta", "vase", "pot", "मिट्टी", "ಮಣ್ಣಿನ"],
         "title": "Hand-thrown Terracotta Vase",
+        "title_hi": "हाथ से गढ़ा टेराकोटा फूलदान",
+        "title_kn": "ಕೈಯಿಂದ ರೂಪಿಸಿದ ಟೆರಾಕೋಟಾ ಹೂದಾನಿ",
         "material": "Natural Terracotta Clay",
         "category": "Home & Living / Decor",
         "craft_technique": "Wheel-thrown & sun-dried",
@@ -49,11 +44,15 @@ CRAFTS = [
         "tags": ["handmade", "terracotta", "pottery", "home-decor", "eco-friendly"],
         "gi_candidate": None,
         "desc": "An elegant hand-thrown terracotta vase shaped on a traditional potter's wheel and finished by hand. Natural clay tones and a matte earthen texture make each piece unique. Crafted over four days by a master potter.",
+        "desc_hi": "पारंपरिक चाक पर गढ़ा और हाथ से पूरा किया गया एक सुंदर टेराकोटा फूलदान। प्राकृतिक मिट्टी के रंग और मैट मिट्टी जैसी बनावट हर टुकड़े को अनोखा बनाती है। एक कुशल कुम्हार द्वारा चार दिनों में तैयार।",
+        "desc_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಕುಂಬಾರಿಕೆ ಚಕ್ರದಲ್ಲಿ ರೂಪಿಸಿ ಕೈಯಿಂದ ಪೂರ್ಣಗೊಳಿಸಿದ ಸೊಗಸಾದ ಟೆರಾಕೋಟಾ ಹೂದಾನಿ. ನೈಸರ್ಗಿಕ ಮಣ್ಣಿನ ಬಣ್ಣ ಮತ್ತು ಮ್ಯಾಟ್ ಮಣ್ಣಿನ ವಿನ್ಯಾಸ ಪ್ರತಿ ತುಣುಕನ್ನೂ ವಿಶಿಷ್ಟವಾಗಿಸುತ್ತದೆ. ನುರಿತ ಕುಂಬಾರರಿಂದ ನಾಲ್ಕು ದಿನಗಳಲ್ಲಿ ತಯಾರಿಸಲಾಗಿದೆ.",
         "base_price": 899,
     },
     {
         "keys": ["silk", "saree", "sari", "weave", "रेशम", "साड़ी", "ರೇಷ್ಮೆ", "ಸೀರೆ"],
         "title": "Handloom Mysore Silk Saree",
+        "title_hi": "हथकरघा मैसूर सिल्क साड़ी",
+        "title_kn": "ಕೈಮಗ್ಗದ ಮೈಸೂರು ರೇಷ್ಮೆ ಸೀರೆ",
         "material": "Pure Mulberry Silk with Gold Zari",
         "category": "Clothing / Ethnic Wear",
         "craft_technique": "Traditional handloom weaving",
@@ -62,11 +61,15 @@ CRAFTS = [
         "tags": ["handloom", "silk", "saree", "mysore-silk", "zari", "heritage"],
         "gi_candidate": "Mysore Silk (GI)",
         "desc": "A resplendent handloom saree woven from pure mulberry silk with genuine gold zari borders. Hand-woven over twelve days in the Mysore tradition, celebrated for its lustrous finish and enduring craftsmanship.",
+        "desc_hi": "शुद्ध शहतूत रेशम से बुनी गई, असली सोने की ज़री किनारी वाली एक भव्य हथकरघा साड़ी। मैसूर परंपरा में बारह दिनों में हाथ से बुनी गई, जो अपनी चमकदार फिनिश और टिकाऊ कारीगरी के लिए प्रसिद्ध है।",
+        "desc_kn": "ಶುದ್ಧ ಹಿಪ್ಪುನೇರಳೆ ರೇಷ್ಮೆಯಿಂದ ನೇಯ್ದ, ನೈಜ ಚಿನ್ನದ ಜರಿ ಅಂಚಿನ ಭವ್ಯವಾದ ಕೈಮಗ್ಗದ ಸೀರೆ. ಮೈಸೂರು ಸಂಪ್ರದಾಯದಲ್ಲಿ ಹನ್ನೆರಡು ದಿನಗಳಲ್ಲಿ ಕೈಯಿಂದ ನೇಯಲಾಗಿದೆ; ತನ್ನ ಹೊಳಪು ಮತ್ತು ಬಾಳಿಕೆ ಬರುವ ಕರಕುಶಲತೆಗೆ ಪ್ರಸಿದ್ಧ.",
         "base_price": 8499,
     },
     {
         "keys": ["wooden", "toy", "channapatna", "wood", "लकड़ी", "खिलौना", "ಮರದ", "ಆಟಿಕೆ"],
         "title": "Channapatna Wooden Spinning Top Set",
+        "title_hi": "चन्नपटना लकड़ी के लट्टू का सेट",
+        "title_kn": "ಚನ್ನಪಟ್ಟಣದ ಮರದ ಬುಗುರಿ ಸೆಟ್",
         "material": "Ivory-wood (Wrightia tinctoria) with natural lac colours",
         "category": "Toys & Games",
         "craft_technique": "Lacquer-turnery (Channapatna)",
@@ -75,12 +78,16 @@ CRAFTS = [
         "tags": ["channapatna", "wooden-toys", "handmade", "non-toxic", "kids", "heritage"],
         "gi_candidate": "Channapatna Toys (GI)",
         "desc": "A vibrant set of hand-turned wooden spinning tops made in the famed Channapatna tradition, coloured with safe natural lac dyes. Non-toxic and lovingly finished — a piece of Karnataka's toy-making heritage.",
+        "desc_hi": "प्रसिद्ध चन्नपटना परंपरा में हाथ से खरादे गए लकड़ी के लट्टुओं का एक रंगीन सेट, जिन्हें सुरक्षित प्राकृतिक लाख के रंगों से रंगा गया है। गैर-विषैले और प्यार से तैयार — कर्नाटक की खिलौना-निर्माण विरासत का एक हिस्सा।",
+        "desc_kn": "ಪ್ರಸಿದ್ಧ ಚನ್ನಪಟ್ಟಣ ಸಂಪ್ರದಾಯದಲ್ಲಿ ಕೈಯಿಂದ ಕಡೆದ ಮರದ ಬುಗುರಿಗಳ ರೋಮಾಂಚಕ ಸೆಟ್, ಸುರಕ್ಷಿತ ನೈಸರ್ಗಿಕ ಅರಗಿನ ಬಣ್ಣಗಳಿಂದ ಬಣ್ಣಿಸಲಾಗಿದೆ. ವಿಷರಹಿತ ಮತ್ತು ಪ್ರೀತಿಯಿಂದ ಪೂರ್ಣಗೊಳಿಸಲಾಗಿದೆ — ಕರ್ನಾಟಕದ ಆಟಿಕೆ ತಯಾರಿಕೆಯ ಪರಂಪರೆಯ ತುಣುಕು.",
         "base_price": 649,
     },
 ]
 
 _DEFAULT = {
     "title": "Handcrafted Artisan Product",
+    "title_hi": "हस्तनिर्मित कारीगर उत्पाद",
+    "title_kn": "ಕೈಯಿಂದ ಮಾಡಿದ ಕರಕುಶಲ ಉತ್ಪನ್ನ",
     "material": "Natural handcrafted materials",
     "category": "Handicrafts",
     "craft_technique": "Traditional handcraft",
@@ -89,15 +96,10 @@ _DEFAULT = {
     "tags": ["handmade", "artisan", "handicraft", "traditional", "india"],
     "gi_candidate": None,
     "desc": "A one-of-a-kind handcrafted piece made by a skilled artisan using traditional techniques and natural materials. Every item is unique and made with care.",
+    "desc_hi": "एक कुशल कारीगर द्वारा पारंपरिक तकनीकों और प्राकृतिक सामग्री से बनाया गया अनोखा हस्तनिर्मित उत्पाद। हर वस्तु अनूठी है और पूरे ध्यान से बनाई गई है।",
+    "desc_kn": "ನುರಿತ ಕುಶಲಕರ್ಮಿಯೊಬ್ಬರು ಸಾಂಪ್ರದಾಯಿಕ ತಂತ್ರಗಳು ಮತ್ತು ನೈಸರ್ಗಿಕ ವಸ್ತುಗಳಿಂದ ತಯಾರಿಸಿದ ಅನನ್ಯ ಕೈಕೆಲಸದ ಉತ್ಪನ್ನ. ಪ್ರತಿ ವಸ್ತುವೂ ವಿಶಿಷ್ಟವಾಗಿದ್ದು ಕಾಳಜಿಯಿಂದ ತಯಾರಿಸಲಾಗಿದೆ.",
     "base_price": 599,
 }
-
-
-def _translate(text: str, table: dict[str, str]) -> str:
-    out = text
-    for en, tr in table.items():
-        out = re.sub(rf"\b{re.escape(en)}\b", tr, out)
-    return out
 
 
 def match_craft(transcript: str) -> dict:
@@ -113,12 +115,8 @@ def mock_listing(transcript: str) -> dict:
     title = c["title"]
     desc = c["desc"]
     return {
-        "title": {"en": title, "hi": _translate(title, _HI), "kn": _translate(title, _KN)},
-        "description": {
-            "en": desc,
-            "hi": _translate(desc, _HI),
-            "kn": _translate(desc, _KN),
-        },
+        "title": {"en": title, "hi": c["title_hi"], "kn": c["title_kn"]},
+        "description": {"en": desc, "hi": c["desc_hi"], "kn": c["desc_kn"]},
         "material": c["material"],
         "category": c["category"],
         "craft_technique": c["craft_technique"],
