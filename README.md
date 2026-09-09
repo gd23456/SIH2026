@@ -229,6 +229,7 @@ We do **not** claim to be live on ONDC. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 | Doc | What's in it |
 |---|---|
+| [docs/BUILD_ORDER.md](docs/BUILD_ORDER.md) | **Start here.** Ordered build stages, exact versions, phone↔laptop setup |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branch flow, PR rules, **security rules** |
 | [docs/SETUP.md](docs/SETUP.md) | Every failure mode and its fix |
 | [docs/TEAM.md](docs/TEAM.md) | Who owns which directory |
