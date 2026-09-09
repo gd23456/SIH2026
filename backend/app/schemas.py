@@ -1,5 +1,7 @@
 """Pydantic request/response models."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -56,6 +58,26 @@ class PublishRequest(BaseModel):
     image_b64: str | None = None
     artisan_name: str = "Artisan"
     location: str = "India"
+
+
+class ListingSummary(BaseModel):
+    """One row in the artisan's "My Products" grid.
+
+    Deliberately omits the image blob: a grid of 24 listings would otherwise
+    ship ~1MB of base64 to a phone on a hotspot. `image_url` points at
+    /api/listings/{id}/image instead, so the browser fetches thumbnails
+    lazily and caches them.
+    """
+
+    listing_id: str
+    title: LocalizedText
+    price: int
+    category: str = ""
+    gi_candidate: str | None = None
+    has_image: bool = False
+    image_url: str
+    storefront_url: str
+    created_at: datetime
 
 
 class PublishResponse(BaseModel):

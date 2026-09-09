@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ listing.title_en }} · Karigar AI</title>
+<meta name="description" content="{{ listing.description_en[:150] }}">
+<!--
+  Everything here is inline on purpose. On demo day the phone is on the
+  laptop's hotspot with no route to the internet, so any CDN font, script or
+  stylesheet would silently fail and the page would render broken in front of
+  a judge. System fonts only, no external requests.
+-->
+<style>
+  :root{
+    --bg:#FBF8F3; --card:#FFFFFF; --ink:#2B2320; --muted:#6E6259;
+    --line:#E7DED1; --brand:#8B5E3C; --green:#2E7D32;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",
+                "Noto Sans Devanagari","Noto Sans Kannada",sans-serif;
+    line-height:1.55; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:680px;margin:0 auto;padding:16px}
+  header{display:flex;align-items:center;gap:8px;padding:4px 0 14px;
+         font-weight:600;color:var(--brand)}
+  .photo{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:14px;
+         border:1px solid var(--line);background:#fff;display:block}
+  .nophoto{display:flex;align-items:center;justify-content:center;
+           color:var(--muted);font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:16px;margin-top:14px}
+  h1{font-size:22px;line-height:1.3;margin:0 0 2px}
+  .alt{font-size:17px;color:var(--muted);margin:2px 0}
+  .pricerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .price{font-size:28px;font-weight:700}
+  .fair{font-size:12px;font-weight:600;color:var(--green);
+        border:1px solid var(--green);border-radius:999px;padding:2px 9px}
+  .gi{display:inline-block;font-size:12px;font-weight:600;color:var(--brand);
+      border:1px solid var(--brand);border-radius:999px;padding:2px 9px;margin-top:8px}
+  p.desc{margin:10px 0 0}
+  p.desc + p.desc{margin-top:8px;color:var(--muted);font-size:15px}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
+  dt{color:var(--muted);font-size:14px}
+  dd{margin:0;font-size:14px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;
+     color:var(--muted);margin:0 0 10px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .tag{font-size:12px;color:var(--muted);background:var(--bg);
+       border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+  .maker{display:flex;align-items:center;gap:12px}
+  .avatar{width:42px;height:42px;border-radius:50%;background:var(--brand);
+          color:#fff;display:flex;align-items:center;justify-content:center;
+          font-weight:700;font-size:17px;flex:0 0 auto}
+  .qr{display:block;margin:10px auto 0;width:150px;height:150px;
+      border:1px solid var(--line);border-radius:10px;background:#fff}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:20px 0 28px}
+  code{background:var(--bg);border:1px solid var(--line);border-radius:5px;
+       padding:1px 5px;font-size:12px}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#191512;--card:#221D19;--ink:#F2EBE3;--muted:#A99C90;
+          --line:#372F28;--brand:#D9A273;--green:#7BC47F}
+    .photo,.avatar{background:#221D19}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>🧺 Karigar AI</header>
+
+  {% if listing.image_b64 %}
+    <img class="photo" src="data:image/png;base64,{{ listing.image_b64 }}"
+         alt="{{ listing.title_en }}">
+  {% else %}
+    <div class="photo nophoto">No photo provided</div>
+  {% endif %}
+
+  <div class="card">
+    <h1>{{ listing.title_en }}</h1>
+    {% if listing.title_hi %}<p class="alt">{{ listing.title_hi }}</p>{% endif %}
+    {% if listing.title_kn %}<p class="alt">{{ listing.title_kn }}</p>{% endif %}
+
+    <div class="pricerow">
+      <span class="price">₹{{ "{:,}".format(listing.price) }}</span>
+      <span class="fair">Fair price · labour-cost floor applied</span>
+    </div>
+
+    {% if listing.gi_candidate %}
+      <span class="gi">🏷️ {{ listing.gi_candidate }}</span>
+    {% endif %}
+
+    {% if listing.description_en %}<p class="desc">{{ listing.description_en }}</p>{% endif %}
+    {% if listing.description_hi %}<p class="desc">{{ listing.description_hi }}</p>{% endif %}
+    {% if listing.description_kn %}<p class="desc">{{ listing.description_kn }}</p>{% endif %}
+
+    {% if listing.tags %}
+      <div class="tags">
+        {% for tag in listing.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Details</h2>
+    <dl>
+      {% if listing.material %}<dt>Material</dt><dd>{{ listing.material }}</dd>{% endif %}
+      {% if listing.craft_technique %}<dt>Technique</dt><dd>{{ listing.craft_technique }}</dd>{% endif %}
+      {% if listing.dimensions %}<dt>Dimensions</dt><dd>{{ listing.dimensions }}</dd>{% endif %}
+      {% if listing.production_time %}<dt>Made in</dt><dd>{{ listing.production_time }}</dd>{% endif %}
+      {% if listing.category %}<dt>Category</dt><dd>{{ listing.category }}</dd>{% endif %}
+      <dt>Listing ID</dt><dd><code>{{ listing.id }}</code></dd>
+    </dl>
+  </div>
+
+  {% if artisan %}
+  <div class="card maker">
+    <div class="avatar">{{ artisan.name[:1]|upper }}</div>
+    <div>
+      <div style="font-weight:600">{{ artisan.name }}</div>
+      <div style="color:var(--muted);font-size:14px">
+        {{ artisan.location or "India" }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Share this listing</h2>
+    <img class="qr" src="{{ qr_url }}" alt="QR code linking to this page">
+  </div>
+
+  <footer>
+    Listed on the Open Network for Digital Commerce · ONDC:RET10<br>
+    Published {{ listing.created_at.strftime("%d %b %Y") }}
+  </footer>
+
+</div>
+</body>
+</html>

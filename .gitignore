@@ -35,6 +35,12 @@ htmlcov/
 backend/karigar.db
 backend/*.db
 backend/*.sqlite3
+# config.py anchors the sqlite file at backend/, but belt-and-braces: uvicorn
+# is normally launched from the repo root, so a stray db here is one careless
+# `git add -A` away from being committed.
+/karigar.db
+/*.db
+/*.sqlite3
 backend/uploads/
 backend/.cache/
 

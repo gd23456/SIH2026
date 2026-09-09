@@ -62,6 +62,35 @@ const STR = {
   ondcPayload: { en: "ONDC catalog (technical)", hi: "ONDC कैटलॉग (तकनीकी)", kn: "ONDC ಕ್ಯಾಟಲಾಗ್ (ತಾಂತ್ರಿಕ)" },
   back: { en: "Back", hi: "वापस", kn: "ಹಿಂದೆ" },
   retake: { en: "Retake", hi: "फिर से", kn: "ಮತ್ತೆ" },
+  // storefront QR (publish screen)
+  scanToVisit: { en: "Scan to open your storefront", hi: "अपनी दुकान खोलने के लिए स्कैन करें", kn: "ನಿಮ್ಮ ಅಂಗಡಿ ತೆರೆಯಲು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ" },
+  scanHint: {
+    en: "Point any phone camera at this code",
+    hi: "किसी भी फ़ोन का कैमरा इस कोड पर रखें",
+    kn: "ಯಾವುದೇ ಫೋನ್ ಕ್ಯಾಮೆರಾವನ್ನು ಈ ಕೋಡ್‌ಗೆ ತೋರಿಸಿ",
+  },
+  openStorefront: { en: "Open storefront", hi: "दुकान खोलें", kn: "ಅಂಗಡಿ ತೆರೆಯಿರಿ" },
+  qrUnavailable: {
+    en: "The storefront needs the server — you're in offline demo mode.",
+    hi: "दुकान के लिए सर्वर चाहिए — आप ऑफ़लाइन डेमो मोड में हैं।",
+    kn: "ಅಂಗಡಿಗೆ ಸರ್ವರ್ ಬೇಕು — ನೀವು ಆಫ್‌ಲೈನ್ ಡೆಮೊ ಮೋಡ್‌ನಲ್ಲಿದ್ದೀರಿ.",
+  },
+  // my products
+  myProducts: { en: "My products", hi: "मेरे उत्पाद", kn: "ನನ್ನ ಉತ್ಪನ್ನಗಳು" },
+  myProductsSub: {
+    en: "Everything you have published so far",
+    hi: "अब तक आपने जो प्रकाशित किया",
+    kn: "ಇಲ್ಲಿಯವರೆಗೆ ನೀವು ಪ್ರಕಟಿಸಿದ ಎಲ್ಲವೂ",
+  },
+  loadingProducts: { en: "Loading your products…", hi: "आपके उत्पाद लोड हो रहे हैं…", kn: "ನಿಮ್ಮ ಉತ್ಪನ್ನಗಳು ಲೋಡ್ ಆಗುತ್ತಿವೆ…" },
+  noProducts: { en: "Nothing published yet", hi: "अभी कुछ प्रकाशित नहीं हुआ", kn: "ಇನ್ನೂ ಏನೂ ಪ್ರಕಟವಾಗಿಲ್ಲ" },
+  noProductsSub: {
+    en: "Your listings will appear here as soon as you publish one.",
+    hi: "जैसे ही आप कुछ प्रकाशित करेंगे, आपकी लिस्टिंग यहाँ दिखेगी।",
+    kn: "ನೀವು ಪ್ರಕಟಿಸಿದ ತಕ್ಷಣ ನಿಮ್ಮ ಪಟ್ಟಿಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
+  },
+  live: { en: "Live", hi: "लाइव", kn: "ಲೈವ್" },
+  done: { en: "Done", hi: "हो गया", kn: "ಮುಗಿದಿದೆ" },
 };
 
 export function t(key, lang = "en") {

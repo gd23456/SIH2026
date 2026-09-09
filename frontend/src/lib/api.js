@@ -3,7 +3,7 @@
 // - Demo: if the backend is unreachable OR demo mode is forced, uses
 //   client-side canned data so the app never breaks on stage / on-device.
 
-import { demoListing, demoPrice, demoPublish } from "./demoData";
+import { demoListing, demoListings, demoPrice, demoPublish } from "./demoData";
 
 function isNative() {
   return typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
@@ -128,6 +128,27 @@ export async function publish({ listing, price, image_b64, artisan_name, locatio
   } catch {
     _lastSource = "demo";
     return demoPublish(listing, price);
+  }
+}
+
+/** URL of the server-rendered QR PNG for a listing. */
+export function qrUrl(listingId) {
+  return `${apiBase()}/api/qr/${encodeURIComponent(listingId)}`;
+}
+
+/** Everything published so far, newest first. Falls back to canned rows. */
+export async function listListings(limit = 24) {
+  if (forcedDemo()) {
+    _lastSource = "demo";
+    return demoListings();
+  }
+  try {
+    const data = await jfetch(`/api/listings?limit=${limit}`);
+    _lastSource = "live";
+    return data;
+  } catch {
+    _lastSource = "demo";
+    return demoListings();
   }
 }
 

@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { publish } from "../lib/api";
+import { publish, qrUrl } from "../lib/api";
 import { Spinner } from "./ui";
 
-export default function PublishStep({ lang, listing, price, imageB64, onReset }) {
+export default function PublishStep({ lang, listing, price, imageB64, onReset, onMyProducts }) {
   const [res, setRes] = useState(null);
   const [showJson, setShowJson] = useState(false);
+  // If the QR image 404s or the host is unreachable, fall back to text
+  // rather than showing a broken-image icon on stage.
+  const [qrOk, setQrOk] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -60,7 +63,36 @@ export default function PublishStep({ lang, listing, price, imageB64, onReset })
         </div>
       </div>
 
-      <a href={res.whatsapp_share_url} target="_blank" rel="noreferrer" className="btn-primary mt-6 text-center !bg-[#25D366]">
+      {res._demo || !qrOk ? (
+        <div className="card mt-6 p-5 text-center">
+          <p className="text-sm text-clay-500">{t("qrUnavailable", lang)}</p>
+        </div>
+      ) : (
+        <div className="card mt-6 p-5 flex flex-col items-center">
+          <p className="font-bold text-clay-900">{t("scanToVisit", lang)}</p>
+          <p className="text-xs text-clay-500 mt-1">{t("scanHint", lang)}</p>
+          <img
+            src={qrUrl(res.listing_id)}
+            alt={t("scanToVisit", lang)}
+            onError={() => setQrOk(false)}
+            className="mt-4 w-full max-w-[240px] aspect-square rounded-2xl border border-clay-100 bg-white"
+          />
+          <a
+            href={res.storefront_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 text-sm font-semibold text-clay-700 underline decoration-clay-300 underline-offset-4"
+          >
+            {t("openStorefront", lang)} ↗
+          </a>
+        </div>
+      )}
+
+      <button className="btn-ghost mt-4" onClick={onMyProducts}>
+        🗂️ {t("myProducts", lang)}
+      </button>
+
+      <a href={res.whatsapp_share_url} target="_blank" rel="noreferrer" className="btn-primary mt-3 text-center !bg-[#25D366]">
         {t("shareWhatsapp", lang)} 💬
       </a>
 
