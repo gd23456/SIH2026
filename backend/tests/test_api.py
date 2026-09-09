@@ -101,6 +101,23 @@ def test_generate_listing_is_keyword_aware(transcript, expect_keyword):
     assert expect_keyword in blob
 
 
+@pytest.mark.parametrize("language", ["ta", "te", "bn", "mr", "gu", "or"])
+def test_generate_listing_carries_the_chosen_language(language):
+    """A listing generated in one of the six extra languages must carry that
+    language populated, not silently fall back to raw English."""
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": "Handmade bamboo basket", "language": language},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    # en/hi/kn always present
+    assert {"en", "hi", "kn"} <= listing["title"].keys()
+    # the chosen language is present and not identical to English
+    assert listing["title"].get(language, "").strip()
+    assert listing["title"][language] != listing["title"]["en"]
+
+
 def test_generate_listing_handles_unknown_craft():
     """An unmatched transcript must still produce a well-formed listing."""
     r = client.post(

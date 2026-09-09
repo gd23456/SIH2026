@@ -16,7 +16,7 @@ export default function ReviewStep({ lang, listing, imageB64, onDone }) {
           <img src={`data:image/png;base64,${imageB64}`} alt="product" className="w-full aspect-square object-cover" />
         )}
         <div className="p-5">
-          <div className="flex gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-3">
             {LANGS.map((l) => (
               <button
                 key={l.code}

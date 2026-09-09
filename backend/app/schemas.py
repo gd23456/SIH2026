@@ -6,9 +6,19 @@ from pydantic import BaseModel, Field
 
 
 class LocalizedText(BaseModel):
+    # en/hi/kn are always generated. The other six are populated only when the
+    # artisan chose that language, so the listing carries their tongue too.
     en: str = ""
     hi: str = ""
     kn: str = ""
+    ta: str = ""
+    te: str = ""
+    bn: str = ""
+    mr: str = ""
+    gu: str = ""
+    or_: str = Field("", alias="or")
+
+    model_config = {"populate_by_name": True}
 
 
 class GenerateListingRequest(BaseModel):
