@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
 import { publish, qrUrl } from "../lib/api";
 import { Spinner } from "./ui";
+import RemoteImage from "./RemoteImage";
 
 export default function PublishStep({ lang, listing, price, imageB64, onReset, onMyProducts }) {
   const [res, setRes] = useState(null);
@@ -71,10 +72,10 @@ export default function PublishStep({ lang, listing, price, imageB64, onReset, o
         <div className="card mt-6 p-5 flex flex-col items-center">
           <p className="font-bold text-clay-900">{t("scanToVisit", lang)}</p>
           <p className="text-xs text-clay-500 mt-1">{t("scanHint", lang)}</p>
-          <img
+          <RemoteImage
             src={qrUrl(res.listing_id)}
             alt={t("scanToVisit", lang)}
-            onError={() => setQrOk(false)}
+            onFail={() => setQrOk(false)}
             className="mt-4 w-full max-w-[240px] aspect-square rounded-2xl border border-clay-100 bg-white"
           />
           <a

@@ -91,6 +91,31 @@ const STR = {
   },
   live: { en: "Live", hi: "लाइव", kn: "ಲೈವ್" },
   done: { en: "Done", hi: "हो गया", kn: "ಮುಗಿದಿದೆ" },
+  // connection sheet (Android needs this: there is no JS console on a phone)
+  connection: { en: "Connection", hi: "कनेक्शन", kn: "ಸಂಪರ್ಕ" },
+  connectionSub: {
+    en: "Point the app at your laptop",
+    hi: "ऐप को अपने लैपटॉप से जोड़ें",
+    kn: "ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ನಿಮ್ಮ ಲ್ಯಾಪ್‌ಟಾಪ್‌ಗೆ ತೋರಿಸಿ",
+  },
+  serverAddress: { en: "Server address", hi: "सर्वर का पता", kn: "ಸರ್ವರ್ ವಿಳಾಸ" },
+  connectHint: {
+    en: "Your laptop's address on this Wi-Fi, e.g. http://192.168.1.42:8000",
+    hi: "इस Wi-Fi पर आपके लैपटॉप का पता, जैसे http://192.168.1.42:8000",
+    kn: "ಈ Wi-Fi ನಲ್ಲಿ ನಿಮ್ಮ ಲ್ಯಾಪ್‌ಟಾಪ್ ವಿಳಾಸ, ಉದಾ http://192.168.1.42:8000",
+  },
+  testConnection: { en: "Test connection", hi: "कनेक्शन जाँचें", kn: "ಸಂಪರ್ಕ ಪರೀಕ್ಷಿಸಿ" },
+  checking: { en: "Checking…", hi: "जाँच हो रही है…", kn: "ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…" },
+  connected: { en: "Connected", hi: "जुड़ गया", kn: "ಸಂಪರ್ಕಗೊಂಡಿದೆ" },
+  unreachable: { en: "Can't reach that address", hi: "यह पता नहीं मिल रहा", kn: "ಆ ವಿಳಾಸ ತಲುಪಲಾಗುತ್ತಿಲ್ಲ" },
+  save: { en: "Save", hi: "सहेजें", kn: "ಉಳಿಸಿ" },
+  close: { en: "Close", hi: "बंद करें", kn: "ಮುಚ್ಚಿ" },
+  offlineDemo: { en: "Offline demo data", hi: "ऑफ़लाइन डेमो डेटा", kn: "ಆಫ್‌ಲೈನ್ ಡೆಮೊ ಡೇಟಾ" },
+  offlineDemoSub: {
+    en: "Run the whole flow with no server at all",
+    hi: "बिना किसी सर्वर के पूरा फ़्लो चलाएँ",
+    kn: "ಯಾವುದೇ ಸರ್ವರ್ ಇಲ್ಲದೆ ಸಂಪೂರ್ಣ ಹರಿವು ಚಲಾಯಿಸಿ",
+  },
 };
 
 export function t(key, lang = "en") {

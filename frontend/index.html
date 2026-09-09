@@ -5,9 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#a4652f" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      Poppins loads non-blocking on purpose. On demo day the phone is on the
+      laptop's hotspot with no route to the internet, and a plain
+      rel="stylesheet" to Google Fonts blocks first paint until it times out —
+      several seconds of white screen on the APK. Loaded this way the UI paints
+      immediately in system-ui (already the fallback in tailwind.config.js) and
+      Poppins swaps in later if there is a network.
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
     <title>Karigar AI — Your voice. Your craft. A national storefront.</title>
   </head>
   <body>

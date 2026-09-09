@@ -21,6 +21,44 @@ export function apiBase() {
   return "http://localhost:8000";
 }
 
+/** Persist a backend address chosen in the Connection sheet. */
+export function setApiBase(url) {
+  const clean = String(url || "").trim().replace(/\/+$/, "");
+  try {
+    if (clean) localStorage.setItem("karigar_api_base", clean);
+    else localStorage.removeItem("karigar_api_base");
+  } catch {}
+  return clean;
+}
+
+/** True when running inside the Capacitor Android shell rather than a browser. */
+export function isNativeApp() {
+  return Boolean(isNative());
+}
+
+/**
+ * Probe a backend without falling back to demo data.
+ *
+ * Every other call in this file silently degrades to canned data, which is
+ * right for the demo but useless when you are trying to find out whether the
+ * phone can actually see the laptop. This one reports the truth.
+ */
+export async function checkHealth(base) {
+  const target = String(base || apiBase()).trim().replace(/\/+$/, "");
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(`${target}/api/health`, { signal: ctrl.signal });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const data = await res.json();
+    return { ok: true, mode: data.mode, model: data.model, base: target };
+  } catch (e) {
+    return { ok: false, error: e?.name === "AbortError" ? "timeout" : "unreachable" };
+  } finally {
+    clearTimeout(to);
+  }
+}
+
 export function forcedDemo() {
   try {
     return localStorage.getItem("karigar_demo") === "1";
@@ -47,7 +85,24 @@ async function jfetch(path, opts = {}, timeoutMs = 12000) {
 
 /** Send an image File; get {original_b64, enhanced_b64, bg_removed}. */
 export async function enhanceImage(file) {
-  if (forcedDemo()) return demoEnhance(file);
+  // Read the file ONCE, before anything else touches it.
+  //
+  // On Android the photo picker hands us a one-shot content:// URI. Uploading
+  // it consumes the handle, so a fallback that re-reads the same File throws
+  // `ProgressEvent` from FileReader. That took down the demo path on device:
+  // the upload timed out, the fallback threw, the rejection went unhandled,
+  // and the photo step silently reset to empty with no error shown at all.
+  let b64 = null;
+  try {
+    b64 = await fileToB64(file);
+  } catch {
+    b64 = null;
+  }
+
+  if (forcedDemo()) {
+    _lastSource = "demo";
+    return demoEnhance(b64);
+  }
   try {
     const fd = new FormData();
     fd.append("file", file);
@@ -56,15 +111,15 @@ export async function enhanceImage(file) {
     return data;
   } catch (e) {
     _lastSource = "demo";
-    return demoEnhance(file);
+    return demoEnhance(b64);
   }
 }
 
 // Demo enhance: we can't cut the background client-side, so return the same
 // image for both and let the UI apply a CSS "studio" treatment on the after.
-async function demoEnhance(file) {
-  const b64 = await fileToB64(file);
-  return { original_b64: b64, enhanced_b64: b64, bg_removed: false, _demo: true };
+// Takes already-read base64 rather than the File — see enhanceImage above.
+function demoEnhance(b64) {
+  return { original_b64: b64 || "", enhanced_b64: b64 || "", bg_removed: false, _demo: true };
 }
 
 export async function generateListing({ transcript, language, image_b64 }) {

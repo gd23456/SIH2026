@@ -6,6 +6,7 @@ import ReviewStep from "./components/ReviewStep";
 import PriceStep from "./components/PriceStep";
 import PublishStep from "./components/PublishStep";
 import MyProducts from "./components/MyProducts";
+import ConnectSheet from "./components/ConnectSheet";
 import { Header, Stepper } from "./components/ui";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
   const [price, setPrice] = useState(0);
   const [source, setSource] = useState(null); // 'live' | 'demo'
   const [view, setView] = useState("flow"); // 'flow' | 'products'
+  const [showConnect, setShowConnect] = useState(false);
 
   function reset() {
     setStep(1);
@@ -57,6 +59,7 @@ export default function App() {
               setLang={setLang}
               onStart={() => setStep(1)}
               onMyProducts={() => setView("products")}
+              onConnect={() => setShowConnect(true)}
             />
           )}
           {view === "flow" && step === 1 && (
@@ -106,6 +109,8 @@ export default function App() {
             />
           )}
         </div>
+
+        {showConnect && <ConnectSheet lang={lang} onClose={() => setShowConnect(false)} />}
       </div>
     </div>
   );
