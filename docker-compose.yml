@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# Karigar AI — containerised backend
+#
+# Use this ONLY if you can't get Python 3.11 running locally. The native
+# `make setup` path is faster to iterate on.
+#
+#   docker compose up backend                          # core (mock AI works)
+#   docker compose build --build-arg WITH_AI=1 backend # + real bg removal
+# ---------------------------------------------------------------------------
+services:
+  backend:
+    build:
+      context: ./backend
+      args:
+        WITH_AI: "0"
+    ports:
+      - "8000:8000"
+    environment:
+      # Reads backend/.env if present; these are the fallbacks.
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_MODEL: "${GEMINI_MODEL:-gemini-2.5-flash}"
+      FORCE_MOCK: "${FORCE_MOCK:-0}"
+      CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    volumes:
+      # Live reload while editing
+      - ./backend/app:/app/app:ro
+      # Persist rembg model weights so you download the 180MB once
+      - u2net-cache:/root/.u2net
+    restart: unless-stopped
+
+volumes:
+  u2net-cache:

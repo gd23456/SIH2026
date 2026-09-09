@@ -1,0 +1,104 @@
+name: CI
+
+# Runs on every push and every PR. Keep this green — `main` must be
+# demoable at all times, so a red build blocks the merge.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — lint + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install core dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check app tests
+
+      # Tests run in mock mode with no API key on purpose: the mock path is
+      # our demo-day fallback, so it is the path that must never break.
+      - name: Test
+        run: pytest tests -v
+
+  frontend:
+    name: Frontend — build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+          retention-days: 7
+
+  secrets-check:
+    name: No secrets committed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cheap guardrail. A real key in git history is a submission-ending
+      # mistake, so we fail loudly rather than politely.
+      - name: Scan for committed secrets
+        run: |
+          set +e
+          FOUND=0
+          echo "Checking for .env files..."
+          if git ls-files | grep -E '(^|/)\.env$|(^|/)\.env\.(local|production)$'; then
+            echo "::error::A .env file is committed. Remove it and rotate the key."
+            FOUND=1
+          fi
+          echo "Checking for API key patterns..."
+          if git grep -nE 'AIza[0-9A-Za-z_-]{35}' -- . ':!*.example' ':!.github/*'; then
+            echo "::error::A Google API key literal is committed. Rotate it immediately."
+            FOUND=1
+          fi
+          if git grep -nE 'gh[pousr]_[0-9A-Za-z]{36}' -- . ':!.github/*'; then
+            echo "::error::A GitHub token is committed. Rotate it immediately."
+            FOUND=1
+          fi
+          exit $FOUND

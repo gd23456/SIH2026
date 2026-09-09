@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------------------
+# Karigar AI — code ownership
+#
+# One owner per directory. This is how six people ship in parallel without
+# spending demo week resolving merge conflicts.
+#
+# ⚠️ TODO: replace the @placeholder handles below with real GitHub usernames
+#    once everyone has accepted their repo invite. See docs/TEAM.md.
+# ---------------------------------------------------------------------------
+
+# Default owner for anything not matched below
+*                           @gd23456
+
+# --- Backend / API / infrastructure ---
+/backend/app/main.py        @gd23456
+/backend/app/db/            @gd23456
+/backend/app/config.py      @gd23456
+/backend/app/schemas.py     @gd23456
+/.github/                   @gd23456
+/Makefile                   @gd23456
+
+# --- AI services: prompts, pricing, GI matching ---
+/backend/app/services/      @gd23456
+/backend/app/data/          @gd23456
+
+# --- Frontend / UX ---
+/frontend/src/components/   @gd23456
+/frontend/src/App.jsx       @gd23456
+/frontend/src/index.css     @gd23456
+
+# --- Mobile: Capacitor, Android, PWA ---
+/frontend/android/          @gd23456
+/frontend/capacitor.config.json @gd23456
+/frontend/public/           @gd23456
+
+# --- i18n, mock data, datasets, QA ---
+/frontend/src/lib/i18n.js   @gd23456
+/backend/app/mock_data.py   @gd23456
+/backend/tests/             @gd23456
+
+# --- Docs, pitch, submission material ---
+/docs/                      @gd23456
+/README.md                  @gd23456
