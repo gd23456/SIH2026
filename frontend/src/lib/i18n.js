@@ -1,0 +1,71 @@
+// UI strings in English / Hindi / Kannada. The artisan picks their language
+// once; the whole interface + generated listing follow.
+
+export const LANGS = [
+  { code: "en", label: "English", native: "English", speech: "en-IN" },
+  { code: "hi", label: "Hindi", native: "हिन्दी", speech: "hi-IN" },
+  { code: "kn", label: "Kannada", native: "ಕನ್ನಡ", speech: "kn-IN" },
+];
+
+const STR = {
+  appName: { en: "Karigar AI", hi: "करिगर AI", kn: "ಕರಿಗರ್ AI" },
+  tagline: {
+    en: "Your voice. Your craft. A national storefront.",
+    hi: "आपकी आवाज़। आपका हुनर। देशभर की दुकान।",
+    kn: "ನಿಮ್ಮ ಧ್ವನಿ. ನಿಮ್ಮ ಕಲೆ. ರಾಷ್ಟ್ರಮಟ್ಟದ ಅಂಗಡಿ.",
+  },
+  chooseLang: { en: "Choose your language", hi: "अपनी भाषा चुनें", kn: "ನಿಮ್ಮ ಭಾಷೆ ಆರಿಸಿ" },
+  start: { en: "Start selling", hi: "बेचना शुरू करें", kn: "ಮಾರಾಟ ಪ್ರಾರಂಭಿಸಿ" },
+  step: { en: "Step", hi: "चरण", kn: "ಹಂತ" },
+  // photo
+  addPhoto: { en: "Add a photo of your product", hi: "अपने उत्पाद की फ़ोटो जोड़ें", kn: "ನಿಮ್ಮ ಉತ್ಪನ್ನದ ಫೋಟೋ ಸೇರಿಸಿ" },
+  takePhoto: { en: "Take / choose photo", hi: "फ़ोटो लें / चुनें", kn: "ಫೋಟೋ ತೆಗೆಯಿರಿ / ಆರಿಸಿ" },
+  enhancing: { en: "AI is cleaning up your photo…", hi: "AI आपकी फ़ोटो साफ़ कर रहा है…", kn: "AI ನಿಮ್ಮ ಫೋಟೋ ಸ್ವಚ್ಛಗೊಳಿಸುತ್ತಿದೆ…" },
+  before: { en: "Before", hi: "पहले", kn: "ಮೊದಲು" },
+  after: { en: "After", hi: "बाद में", kn: "ನಂತರ" },
+  bgRemoved: { en: "Background removed & studio-lit ✨", hi: "बैकग्राउंड हटाया गया ✨", kn: "ಹಿನ್ನೆಲೆ ತೆಗೆದುಹಾಕಲಾಗಿದೆ ✨" },
+  // voice
+  describe: { en: "Tell us about it — just speak", hi: "बस बोलकर बताइए", kn: "ಮಾತನಾಡಿ ಹೇಳಿ" },
+  tapMic: { en: "Tap the mic and speak", hi: "माइक दबाएँ और बोलें", kn: "ಮೈಕ್ ಒತ್ತಿ ಮಾತನಾಡಿ" },
+  listening: { en: "Listening…", hi: "सुन रहा है…", kn: "ಕೇಳುತ್ತಿದೆ…" },
+  hintEx: {
+    en: 'e.g. "Handmade bamboo basket, takes 3 days to make"',
+    hi: 'जैसे "हाथ से बना बाँस का टोकरा, बनाने में 3 दिन"',
+    kn: 'ಉದಾ "ಕೈಯಿಂದ ಮಾಡಿದ ಬಿದಿರು ಬುಟ್ಟಿ, 3 ದಿನ ಬೇಕು"',
+  },
+  orType: { en: "or type it", hi: "या टाइप करें", kn: "ಅಥವಾ ಟೈಪ್ ಮಾಡಿ" },
+  generate: { en: "Create my listing", hi: "मेरी लिस्टिंग बनाएँ", kn: "ನನ್ನ ಪಟ್ಟಿ ರಚಿಸಿ" },
+  generating: { en: "AI is writing your listing…", hi: "AI आपकी लिस्टिंग लिख रहा है…", kn: "AI ನಿಮ್ಮ ಪಟ್ಟಿ ಬರೆಯುತ್ತಿದೆ…" },
+  // review
+  yourListing: { en: "Your listing is ready", hi: "आपकी लिस्टिंग तैयार है", kn: "ನಿಮ್ಮ ಪಟ್ಟಿ ಸಿದ್ಧವಾಗಿದೆ" },
+  material: { en: "Material", hi: "सामग्री", kn: "ಸಾಮಗ್ರಿ" },
+  category: { en: "Category", hi: "श्रेणी", kn: "ವರ್ಗ" },
+  technique: { en: "Technique", hi: "तकनीक", kn: "ತಂತ್ರ" },
+  time: { en: "Made in", hi: "बनाने का समय", kn: "ತಯಾರಿ ಸಮಯ" },
+  giTag: { en: "Possible GI tag", hi: "संभावित GI टैग", kn: "ಸಂಭಾವ್ಯ GI ಟ್ಯಾಗ್" },
+  next: { en: "Looks good — set price", hi: "ठीक है — दाम तय करें", kn: "ಸರಿ — ಬೆಲೆ ನಿಗದಿಪಡಿಸಿ" },
+  // price
+  fairPrice: { en: "Fair price", hi: "उचित दाम", kn: "ನ್ಯಾಯಯುತ ಬೆಲೆ" },
+  suggested: { en: "AI suggested price", hi: "AI सुझाया दाम", kn: "AI ಸೂಚಿಸಿದ ಬೆಲೆ" },
+  whyPrice: { en: "Why this price?", hi: "यह दाम क्यों?", kn: "ಈ ಬೆಲೆ ಏಕೆ?" },
+  publish: { en: "Publish to ONDC", hi: "ONDC पर प्रकाशित करें", kn: "ONDC ಗೆ ಪ್ರಕಟಿಸಿ" },
+  publishing: { en: "Publishing to the ONDC network…", hi: "ONDC नेटवर्क पर प्रकाशित हो रहा है…", kn: "ONDC ನೆಟ್‌ವರ್ಕ್‌ಗೆ ಪ್ರಕಟಿಸಲಾಗುತ್ತಿದೆ…" },
+  // published
+  published: { en: "You're live on ONDC! 🎉", hi: "आप ONDC पर लाइव हैं! 🎉", kn: "ನೀವು ONDC ನಲ್ಲಿ ಲೈವ್! 🎉" },
+  publishedSub: {
+    en: "Buyers across every ONDC app can now find your product.",
+    hi: "हर ONDC ऐप पर खरीदार अब आपका उत्पाद पा सकते हैं।",
+    kn: "ಪ್ರತಿ ONDC ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಖರೀದಿದಾರರು ನಿಮ್ಮ ಉತ್ಪನ್ನವನ್ನು ಕಾಣಬಹುದು.",
+  },
+  shareWhatsapp: { en: "Share on WhatsApp", hi: "WhatsApp पर साझा करें", kn: "WhatsApp ನಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ" },
+  sellAnother: { en: "Sell another product", hi: "और उत्पाद बेचें", kn: "ಇನ್ನೊಂದು ಉತ್ಪನ್ನ ಮಾರಿ" },
+  ondcPayload: { en: "ONDC catalog (technical)", hi: "ONDC कैटलॉग (तकनीकी)", kn: "ONDC ಕ್ಯಾಟಲಾಗ್ (ತಾಂತ್ರಿಕ)" },
+  back: { en: "Back", hi: "वापस", kn: "ಹಿಂದೆ" },
+  retake: { en: "Retake", hi: "फिर से", kn: "ಮತ್ತೆ" },
+};
+
+export function t(key, lang = "en") {
+  const entry = STR[key];
+  if (!entry) return key;
+  return entry[lang] || entry.en || key;
+}

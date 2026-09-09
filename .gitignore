@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------------
+# Karigar AI — .gitignore
+# If you are about to commit something and you are not sure, ASK IN THE GROUP.
+# Never commit: API keys, .env files, model weights, APK signing keystores.
+# ---------------------------------------------------------------------------
+
+# --- secrets (NEVER commit these) ---
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+*.pem
+*.key
+*.keystore
+*.jks
+google-services.json
+service-account*.json
+
+# --- python ---
+backend/.venv/
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- local database / uploads (generated at runtime) ---
+backend/karigar.db
+backend/*.db
+backend/*.sqlite3
+backend/uploads/
+backend/.cache/
+
+# --- rembg / onnx model weights (~180MB, downloaded on first run) ---
+.u2net/
+**/u2net*.onnx
+
+# --- node / frontend ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# --- capacitor / android build artifacts (keep android/ source, ignore builds) ---
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/capacitor-cordova-android-plugins/
+frontend/android/local.properties
+frontend/android/.idea/
+*.apk
+*.aab
+*.iml
+
+# --- editors / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# --- logs ---
+*.log
+npm-debug.log*
+yarn-error.log*

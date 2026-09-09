@@ -1,0 +1,36 @@
+# ---------------------------------------------------------------------------
+# Karigar AI — CORE backend dependencies
+#
+# These MUST always install cleanly. Everything here is pure-python or has
+# universal wheels, so `pip install -r requirements.txt` should never fail
+# on any teammate's laptop.
+#
+# The heavy AI vision deps (rembg / onnxruntime) live in requirements-ai.txt
+# ON PURPOSE — they are the #1 cause of "pip install failed" and the app
+# degrades gracefully without them. Install those separately.
+#
+#   pip install -r requirements.txt        # always do this
+#   pip install -r requirements-ai.txt     # optional: true background removal
+#   pip install -r requirements-dev.txt    # only if you're running tests
+# ---------------------------------------------------------------------------
+
+# --- web framework ---
+fastapi>=0.115,<0.200
+uvicorn[standard]>=0.30,<0.40
+python-multipart>=0.0.9
+pydantic>=2.9,<3
+pydantic-settings>=2.5,<3
+
+# --- imaging (pure wheels, always available) ---
+pillow>=10.4,<12
+
+# --- config ---
+python-dotenv>=1.0,<2
+
+# --- AI (listing + price generation) ---
+google-generativeai>=0.8,<0.9
+
+# --- Phase 1: persistence, storefront, QR ---
+sqlmodel>=0.0.22,<0.1
+jinja2>=3.1,<4
+qrcode[pil]>=7.4,<9

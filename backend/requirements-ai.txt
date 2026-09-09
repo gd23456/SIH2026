@@ -1,0 +1,21 @@
+# ---------------------------------------------------------------------------
+# Karigar AI — OPTIONAL heavy AI vision dependencies
+#
+# This gives you TRUE background removal (rembg / U^2-Net neural net).
+# Without it the app still works: image_service falls back to studio-lighting
+# the whole photo instead of cutting the object out.
+#
+#   pip install -r requirements-ai.txt
+#
+# ⚠️ KNOWN ISSUES — read before you panic:
+#
+#  1. Needs Python 3.11. onnxruntime does not publish wheels for every new
+#     Python release. If you're on 3.13/3.14 this WILL fail. See docs/SETUP.md.
+#  2. First run downloads ~180MB of model weights to ~/.u2net/ — do this on
+#     good wifi BEFORE demo day, not at the venue.
+#  3. If it won't install, DON'T fight it. Skip this file. The demo works
+#     fine without it and nobody watching can tell in 90 seconds.
+# ---------------------------------------------------------------------------
+
+rembg>=2.0.59,<3
+onnxruntime>=1.19,<2

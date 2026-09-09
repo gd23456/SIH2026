@@ -1,0 +1,14 @@
+{
+  "appId": "ai.karigar.app",
+  "appName": "Karigar AI",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "SpeechRecognition": {
+      "permissions": ["android.permission.RECORD_AUDIO"]
+    }
+  }
+}
