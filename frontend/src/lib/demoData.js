@@ -39,27 +39,80 @@ export function demoListing(transcript = "") {
   };
 }
 
+// Kept in lock-step with backend/app/services/pricing_service.py so the offline
+// demo shows the SAME grounded number, market comparable and wage-floor beat
+// the live backend would. Three signals: LLM estimate × market band × wage floor.
+const DAILY_FAIR_WAGE = 400; // ₹/day — the fairness guarantee
+const MARKET_WEIGHT = 0.45;
+const COMPARABLES = [
+  { keys: ["silk", "saree", "sari", "handloom", "zari"], cat: "Handloom Silk Saree", median: 8200, low: 5200, high: 15500, count: 23 },
+  { keys: ["channapatna", "toy", "wooden toy", "lacquer"], cat: "Channapatna Wooden Toys", median: 640, low: 320, high: 1200, count: 41 },
+  { keys: ["bamboo", "cane", "basket", "wicker"], cat: "Bamboo & Cane Storage", median: 720, low: 480, high: 1250, count: 34 },
+  { keys: ["terracotta", "pottery", "clay", "vase", "decor"], cat: "Terracotta & Pottery Decor", median: 860, low: 520, high: 1600, count: 29 },
+  { keys: ["jute", "tote", "sack"], cat: "Jute Bags", median: 430, low: 240, high: 820, count: 38 },
+  { keys: ["brass", "bidri", "dhokra", "metal"], cat: "Brassware & Metal Craft", median: 1450, low: 780, high: 3400, count: 27 },
+];
+const COMP_DEFAULT = { cat: "Handmade", median: 650, low: 350, high: 1500, count: 46 };
+
+function matchComparable(listing = {}) {
+  const hay = [listing.title?.en, listing.category, listing.material, listing.craft_technique]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return COMPARABLES.find((c) => c.keys.some((k) => hay.includes(k))) || COMP_DEFAULT;
+}
+
+function daysFrom(text) {
+  const m = String(text || "").match(/(\d+)/);
+  return m ? Math.max(1, Number(m[1])) : 2;
+}
+
 export function demoPrice(listing = {}) {
   const isSilk = (listing.material || "").toLowerCase().includes("silk");
-  const suggested = isSilk ? 8499 : listing.category?.includes("Decor") ? 899 : 749;
+  const llm = isSilk ? 8499 : listing.category?.includes("Decor") ? 899 : 749;
+
+  const band = matchComparable(listing);
+  const blended = Math.round((1 - MARKET_WEIGHT) * llm + MARKET_WEIGHT * band.median);
+
+  const labourDays = daysFrom(listing.production_time || "3 days");
+  const wageFloor = labourDays * DAILY_FAIR_WAGE;
+  const wageFloorApplied = wageFloor > blended;
+  const suggested = Math.max(blended, wageFloor);
+
+  const minPrice = Math.min(Math.max(wageFloor, Math.round(suggested * 0.85)), suggested);
+  const maxPrice = Math.max(Math.round(suggested * 1.35), band.high, suggested);
+
+  // breakdown scaled to sum to the suggested price
+  const materials = Math.round(suggested * 0.35);
+  const labour = Math.round(suggested * 0.4);
+  const skill = Math.round(suggested * 0.2);
+  const platform = suggested - materials - labour - skill;
+
   return {
     suggested_price: suggested,
-    min_price: Math.round(suggested * 0.85),
-    max_price: Math.round(suggested * 1.35),
+    min_price: minPrice,
+    max_price: maxPrice,
     currency: "INR",
     reasoning: [
-      `Materials (~35%): ${listing.material || "natural materials"}`,
-      `Labour: ${listing.production_time || "3 days"} of skilled handwork`,
-      "Skill premium for traditional handcraft (~20%)",
-      `Comparable handmade listings sell for ₹${Math.round(suggested * 0.85)}–₹${Math.round(suggested * 1.35)}`,
+      `Market check: median ₹${band.median.toLocaleString("en-IN")} across ${band.count} similar ${band.cat.toLowerCase()} listings.`,
+      `Fair-wage floor: ${labourDays} day(s) × ₹${DAILY_FAIR_WAGE}/day = ₹${wageFloor.toLocaleString("en-IN")}` +
+        (wageFloorApplied
+          ? " — binding, so the price was raised to protect the artisan's labour."
+          : " — the suggested price already clears it."),
+      `Skill premium for traditional handcraft (~20%)`,
     ],
     breakdown: [
-      { label: "Materials", amount: Math.round(suggested * 0.35) },
-      { label: "Labour", amount: Math.round(suggested * 0.4) },
-      { label: "Skill premium", amount: Math.round(suggested * 0.2) },
-      { label: "Platform + shipping", amount: Math.round(suggested * 0.05) },
+      { label: "Materials", amount: materials },
+      { label: "Labour", amount: labour },
+      { label: "Skill premium", amount: skill },
+      { label: "Platform + shipping", amount: platform },
     ],
-    market_note: "Priced to protect the artisan's margin while staying competitive with mass-market alternatives.",
+    market_note: `Grounded against ${band.count} comparable listings and a fair-wage floor.`,
+    market_median: band.median,
+    market_sample_count: band.count,
+    market_source: "ONDC/Amazon/Etsy observed listings",
+    wage_floor: wageFloor,
+    wage_floor_applied: wageFloorApplied,
   };
 }
 

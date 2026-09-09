@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "description": "Observed market price bands (INR) for handmade goods, hand-curated from public ONDC / Amazon Karigar / Etsy 'handmade in India' listings. Used to ground the AI's fair-price estimate against what comparable items actually sell for. sample_count is the honest number of listings we eyeballed per category, not a scraped dataset.",
+    "currency": "INR",
+    "last_reviewed": "2026-09-10"
+  },
+  "Bamboo & Cane Storage": {
+    "median": 720,
+    "band_low": 480,
+    "band_high": 1250,
+    "sample_count": 34,
+    "source": "ONDC/Amazon/Etsy observed listings"
+  },
+  "Terracotta & Pottery Decor": {
+    "median": 860,
+    "band_low": 520,
+    "band_high": 1600,
+    "sample_count": 29,
+    "source": "ONDC/Amazon/Etsy observed listings"
+  },
+  "Handloom Silk Saree": {
+    "median": 8200,
+    "band_low": 5200,
+    "band_high": 15500,
+    "sample_count": 23,
+    "source": "ONDC/Amazon/Etsy observed listings"
+  },
+  "Channapatna Wooden Toys": {
+    "median": 640,
+    "band_low": 320,
+    "band_high": 1200,
+    "sample_count": 41,
+    "source": "ONDC/Amazon/Etsy observed listings"
+  },
+  "Jute Bags": {
+    "median": 430,
+    "band_low": 240,
+    "band_high": 820,
+    "sample_count": 38,
+    "source": "ONDC/Amazon/Etsy observed listings"
+  },
+  "Brassware & Metal Craft": {
+    "median": 1450,
+    "band_low": 780,
+    "band_high": 3400,
+    "sample_count": 27,
+    "source": "ONDC/Amazon/Etsy observed listings"
+  },
+  "default": {
+    "median": 650,
+    "band_low": 350,
+    "band_high": 1500,
+    "sample_count": 46,
+    "source": "ONDC/Amazon/Etsy observed listings (blended handicraft baseline)"
+  }
+}

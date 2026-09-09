@@ -48,6 +48,13 @@ const STR = {
   fairPrice: { en: "Fair price", hi: "उचित दाम", kn: "ನ್ಯಾಯಯುತ ಬೆಲೆ" },
   suggested: { en: "AI suggested price", hi: "AI सुझाया दाम", kn: "AI ಸೂಚಿಸಿದ ಬೆಲೆ" },
   whyPrice: { en: "Why this price?", hi: "यह दाम क्यों?", kn: "ಈ ಬೆಲೆ ಏಕೆ?" },
+  marketMedianLabel: { en: "Market median", hi: "बाज़ार मध्यमान", kn: "ಮಾರುಕಟ್ಟೆ ಮಧ್ಯಮ" },
+  comparableListings: { en: "comparable listings", hi: "तुलनीय लिस्टिंग", kn: "ಹೋಲಿಕೆ ಪಟ್ಟಿಗಳು" },
+  wageProtected: {
+    en: "Protected by a fair-wage floor — never below the artisan's labour cost.",
+    hi: "उचित-मज़दूरी सीमा से सुरक्षित — कारीगर की श्रम लागत से कभी कम नहीं।",
+    kn: "ನ್ಯಾಯಯುತ-ವೇತನ ಮಿತಿಯಿಂದ ರಕ್ಷಿತ — ಕುಶಲಕರ್ಮಿಯ ಶ್ರಮ ವೆಚ್ಚಕ್ಕಿಂತ ಎಂದಿಗೂ ಕಡಿಮೆ ಇಲ್ಲ.",
+  },
   publish: { en: "Publish to ONDC", hi: "ONDC पर प्रकाशित करें", kn: "ONDC ಗೆ ಪ್ರಕಟಿಸಿ" },
   publishing: { en: "Publishing to the ONDC network…", hi: "ONDC नेटवर्क पर प्रकाशित हो रहा है…", kn: "ONDC ನೆಟ್‌ವರ್ಕ್‌ಗೆ ಪ್ರಕಟಿಸಲಾಗುತ್ತಿದೆ…" },
   // published

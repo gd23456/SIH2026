@@ -35,6 +35,7 @@ from .schemas import (
     GenerateListingRequest,
     ListingSummary,
     PriceRequest,
+    PriceResponse,
     PublishRequest,
     PublishResponse,
 )
@@ -126,7 +127,7 @@ def generate_listing(req: GenerateListingRequest):
     return gemini_service.generate_listing(req.transcript, req.language, req.image_b64)
 
 
-@app.post("/api/price")
+@app.post("/api/price", response_model=PriceResponse)
 def price(req: PriceRequest):
     return pricing_service.fair_price(req.model_dump())
 

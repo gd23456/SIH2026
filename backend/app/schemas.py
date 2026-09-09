@@ -50,6 +50,14 @@ class PriceResponse(BaseModel):
     reasoning: list[str]
     breakdown: list[PriceBreakdown]
     market_note: str = ""
+    # Grounding signals (Fair-Price engine). market_* are 0/"" when no
+    # comparable category matched; wage_floor_applied is True when the
+    # fair-wage floor was the binding constraint on the suggested price.
+    market_median: int = 0
+    market_sample_count: int = 0
+    market_source: str = ""
+    wage_floor: int = 0
+    wage_floor_applied: bool = False
 
 
 class PublishRequest(BaseModel):

@@ -140,6 +140,68 @@ def test_price_returns_sane_numbers_and_reasoning():
         assert {"label", "amount"} <= row.keys()
 
 
+# --- grounded fair-price engine -------------------------------------------
+
+
+def _price(**payload) -> dict:
+    r = client.post("/api/price", json=payload)
+    assert r.status_code == 200
+    return r.json()
+
+
+def test_price_is_grounded_against_a_market_comparable():
+    """A recognisable craft must surface an observed market band."""
+    p = _price(
+        title="Handwoven Bamboo Storage Basket",
+        material="Natural Bamboo",
+        category="Home & Living / Storage",
+        craft_technique="Traditional hand-weaving",
+        production_time="3 days",
+    )
+    assert p["market_median"] > 0, "bamboo storage should match a comparable"
+    assert p["market_sample_count"] > 0
+    assert p["market_source"]
+    # the market note / reasoning must actually cite the comparable
+    assert any("median" in r.lower() for r in p["reasoning"])
+
+
+def test_price_never_falls_below_the_fair_wage_floor():
+    """The social-impact guarantee: price ≥ labour_days × DAILY_FAIR_WAGE."""
+    from app.services.pricing_service import DAILY_FAIR_WAGE
+
+    # A long production time forces a high wage floor that must bind.
+    p = _price(
+        title="Simple cotton pouch",
+        material="Cotton",
+        category="Textiles",
+        production_time="30 days",
+    )
+    expected_floor = 30 * DAILY_FAIR_WAGE
+    assert p["wage_floor"] == expected_floor
+    assert p["suggested_price"] >= p["wage_floor"]
+    assert p["suggested_price"] >= expected_floor
+    assert p["wage_floor_applied"] is True
+    assert p["min_price"] >= p["wage_floor"]
+
+
+def test_price_breakdown_sums_to_suggested_price():
+    p = _price(
+        title="Hand-thrown Terracotta Vase",
+        material="Terracotta Clay",
+        category="Home & Living / Decor",
+        production_time="4 days",
+    )
+    assert sum(b["amount"] for b in p["breakdown"]) == p["suggested_price"]
+    assert p["min_price"] <= p["suggested_price"] <= p["max_price"]
+
+
+def test_price_reports_grounding_fields_even_without_a_match():
+    """An unknown craft still gets the fair-wage floor and a default band."""
+    p = _price(title="mysterious artefact", material="unknown", production_time="2 days")
+    assert "wage_floor" in p and "wage_floor_applied" in p
+    assert p["suggested_price"] >= p["wage_floor"]
+
+
 # --- publish --------------------------------------------------------------
 
 
