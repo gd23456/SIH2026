@@ -62,19 +62,53 @@ export async function supportedLanguages() {
  * @returns {Promise<{stop: () => Promise<void>}>} controller
  * Callbacks: onPartial(text), onFinal(text), onError(err)
  */
-export async function startListening(langSpeech, { onPartial, onFinal, onError }) {
+export async function startListening(langSpeech, { onPartial, onFinal, onError, onState }) {
   if (isNative()) {
-    return startNative(langSpeech, { onPartial, onFinal, onError });
+    return startNative(langSpeech, { onPartial, onFinal, onError, onState });
   }
-  return startWeb(langSpeech, { onPartial, onFinal, onError });
+  return startWeb(langSpeech, { onPartial, onFinal, onError, onState });
 }
 
-/** Join completed segments with the in-flight one into a single transcript. */
+/**
+ * Join completed segments with the in-flight one, removing any repeated overlap.
+ *
+ * Plain concatenation duplicates text. When Android restarts a session it
+ * frequently re-delivers audio it has already transcribed, so one spoken
+ * sentence arrives as:
+ *
+ *   segments: ["yeh ek Cup holder"]
+ *   current:  "yeh ek Cup holder hai"
+ *
+ * and naive joining put "yeh ek Cup holder yeh ek Cup holder hai" on screen.
+ * We compare word-wise and drop the longest prefix of `current` that repeats
+ * the tail of what we already have.
+ *
+ * Longest-first matters: for "a b a b c" the 2-word overlap is the correct one,
+ * and checking short overlaps first would leave a stray "b" behind.
+ */
 function joinText(segments, current) {
-  return [...segments, current].map((s) => (s || "").trim()).filter(Boolean).join(" ");
+  const prev = segments.map((s) => (s || "").trim()).filter(Boolean).join(" ");
+  const cur = (current || "").trim();
+  if (!prev) return cur;
+  if (!cur) return prev;
+
+  const prevWords = prev.split(/\s+/);
+  const curWords = cur.split(/\s+/);
+  const norm = (w) => w.toLowerCase().replace(/[.,!?।॥]+$/u, "");
+  const max = Math.min(prevWords.length, curWords.length);
+
+  for (let n = max; n > 0; n--) {
+    const tail = prevWords.slice(-n).map(norm).join(" ");
+    const head = curWords.slice(0, n).map(norm).join(" ");
+    if (tail === head) {
+      const rest = curWords.slice(n).join(" ");
+      return rest ? `${prev} ${rest}` : prev;
+    }
+  }
+  return `${prev} ${cur}`;
 }
 
-async function startNative(lang, { onPartial, onFinal, onError }) {
+async function startNative(lang, { onPartial, onFinal, onError, onState }) {
   let SpeechRecognition;
   try {
     ({ SpeechRecognition } = await import("@capacitor-community/speech-recognition"));
@@ -138,6 +172,9 @@ async function startNative(lang, { onPartial, onFinal, onError }) {
         // thought does not end the recording.
         if (current.trim()) segments.push(current.trim());
         current = "";
+        // Android ended this utterance. If the user still wants to listen we
+        // reopen, but say so — the mic is shut during the gap.
+        onState?.(wanted ? "restarting" : "stopped");
         if (wanted) restart();
       }),
     );
@@ -153,6 +190,10 @@ async function startNative(lang, { onPartial, onFinal, onError }) {
       partialResults: true,
       popup: false,
     });
+    // Only now is the mic genuinely open. The UI showed "Listening…" from the
+    // moment the button was tapped, which stayed on screen through every gap
+    // between sessions — and stuck permanently if a restart failed.
+    onState?.("listening");
   }
 
   async function restart() {
@@ -175,6 +216,7 @@ async function startNative(lang, { onPartial, onFinal, onError }) {
         if (wanted) await begin();
       } catch (err) {
         wanted = false;
+        onState?.("stopped");
         onError?.(err?.message || e?.message || "restart-failed");
         onFinal?.(joinText(segments, current));
       }
@@ -215,7 +257,7 @@ async function startNative(lang, { onPartial, onFinal, onError }) {
   };
 }
 
-function startWeb(lang, { onPartial, onFinal, onError }) {
+function startWeb(lang, { onPartial, onFinal, onError, onState }) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     onError?.("unsupported");
