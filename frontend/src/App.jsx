@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Welcome from "./components/Welcome";
 import AuthScreen from "./components/AuthScreen";
 import PhotoStep from "./components/PhotoStep";
@@ -88,6 +88,48 @@ export default function App() {
     setPrice(0);
     setView("flow");
   }
+
+  // Android hardware back.
+  //
+  // Capacitor's default when nothing handles `backButton` is to exit the app,
+  // so pressing back anywhere — halfway through a listing, inside Profile,
+  // with the Connection sheet open — closed Karigar outright and lost the work.
+  // This walks one level up the UI instead, and only leaves the app from the
+  // welcome screen, which is what Android users expect.
+  //
+  // The handler is kept in a ref so the listener can be registered once while
+  // still seeing current state; re-registering on every state change races with
+  // the plugin's async addListener and can drop or double-fire presses.
+  const backHandler = useRef(() => {});
+  backHandler.current = () => {
+    if (showConnect) return setShowConnect(false);
+    if (view === "plans" || view === "privacy") return setView("profile");
+    if (view !== "flow") return setView("flow"); // products / buyer / profile / auth
+    if (step > 1 && step < 5) return back();
+    if (step > 0) return setStep(0); // step 1 or the published screen → welcome
+    return null; // already at welcome: fall through to exit
+  };
+
+  useEffect(() => {
+    let remove = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { App: CapApp } = await import("@capacitor/app");
+        const handle = await CapApp.addListener("backButton", () => {
+          if (backHandler.current() === null) CapApp.exitApp();
+        });
+        if (cancelled) handle.remove();
+        else remove = () => handle.remove();
+      } catch {
+        // Web build (or plugin unavailable): browsers have their own back.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      remove?.();
+    };
+  }, []);
 
   return (
     // Phone frame: fills screen on mobile, centered card on desktop
