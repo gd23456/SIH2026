@@ -9,8 +9,9 @@
 #
 # ⚠️ KNOWN ISSUES — read before you panic:
 #
-#  1. Needs Python 3.11. onnxruntime does not publish wheels for every new
-#     Python release. If you're on 3.13/3.14 this WILL fail. See docs/SETUP.md.
+#  1. Needs an onnxruntime wheel for your Python. Recent onnxruntime (1.20+)
+#     ships wheels for 3.11–3.13 (verified working on 3.13 with 1.24). Very new
+#     Python releases can still lag; if install fails, use 3.11. See docs/SETUP.md.
 #  2. First run downloads ~180MB of model weights to ~/.u2net/ — do this on
 #     good wifi BEFORE demo day, not at the venue.
 #  3. If it won't install, DON'T fight it. Skip this file. The demo works

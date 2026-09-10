@@ -22,7 +22,9 @@ class LocalizedText(BaseModel):
 
 
 class GenerateListingRequest(BaseModel):
-    transcript: str = Field(..., description="What the artisan said, in their language")
+    # Empty is valid: the photo-only path lets Gemini vision identify the craft
+    # from the (enhanced) image alone, with no spoken description.
+    transcript: str = Field("", description="What the artisan said, in their language (may be empty for photo-only)")
     language: str = Field("en", description="BCP-47-ish code of the spoken language: en | hi | kn")
     image_b64: str | None = Field(None, description="Optional enhanced product image (base64, no data: prefix)")
 

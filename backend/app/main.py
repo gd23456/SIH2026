@@ -51,6 +51,7 @@ from .services import (
     gemini_service,
     gi_service,
     image_service,
+    integrations,
     ondc_service,
     pricing_service,
     shopify_service,
@@ -120,6 +121,9 @@ def health():
         "mode": _mode(),
         "model": gemini_service.active_model(),
         "configured_model": settings.GEMINI_MODEL,
+        # One glance at what's actually wired: gemini live|mock, rembg bool,
+        # shopify configured|off, firebase configured|off.
+        "integrations": integrations.status(),
     }
 
 

@@ -88,12 +88,20 @@ def active_model() -> str:
     return _resolved_model or f"{get_settings().GEMINI_MODEL} (unverified)"
 
 
+def ping() -> dict:
+    """One tiny live call, for the doctor. {ok, model} or {ok: False, reason}."""
+    if get_settings().use_mock:
+        return {"ok": False, "reason": "no GEMINI_API_KEY (mock mode)"}
+    text = _generate(["Reply with the single word: OK"])
+    if text is None:
+        return {"ok": False, "reason": "all candidate models failed or SDK unavailable"}
+    return {"ok": True, "model": active_model()}
+
+
 _LISTING_PROMPT = """You are an e-commerce cataloguing assistant for Indian artisans who
-sell handicrafts. An artisan just described their product by voice in {lang}.
+sell handicrafts.
 
-Their words: "{transcript}"
-
-{image_hint}
+{source_line}
 
 Produce a polished, marketplace-ready product listing. Return STRICT JSON only,
 no markdown, with exactly this shape:
@@ -150,12 +158,29 @@ def _extract_json(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
-def generate_listing(transcript: str, language: str = "en", image_b64: str | None = None) -> dict:
-    image_hint = (
-        "A photo of the product is attached — use it to refine material, colour and category."
-        if image_b64
-        else "No photo provided; infer sensible details from the description."
-    )
+def generate_listing(transcript: str = "", language: str = "en", image_b64: str | None = None) -> dict:
+    lang_name = _LANG_NAME.get(language, "the local language")
+    has_transcript = bool((transcript or "").strip())
+
+    # Three real sources of truth: voice+photo, voice only, or PHOTO ONLY —
+    # the last is the "snap a photo, AI identifies the craft" path.
+    if has_transcript and image_b64:
+        source_line = (
+            f'The artisan described it by voice in {lang_name}: "{transcript}". '
+            "A photo of the product is also attached — use it to refine material, colour and category."
+        )
+    elif image_b64:
+        source_line = (
+            "No spoken description was given. A photo of the product is attached — "
+            "identify the craft, materials, technique and likely category directly from the "
+            "photo, and draft the full listing from it."
+        )
+    else:
+        source_line = (
+            f'The artisan described it by voice in {lang_name}: "{transcript}". '
+            "No photo provided; infer sensible details from the description."
+        )
+
     # Always en/hi/kn, plus the artisan's own language when it's one of the
     # extra six — so the listing speaks their tongue too.
     langs = list(_ALWAYS)
@@ -165,9 +190,7 @@ def generate_listing(transcript: str, language: str = "en", image_b64: str | Non
     lang_list = ", ".join(f"{_LANG_NAME[c]} ({c})" for c in langs)
 
     prompt = _LISTING_PROMPT.format(
-        lang=_LANG_NAME.get(language, "the local language"),
-        transcript=transcript,
-        image_hint=image_hint,
+        source_line=source_line,
         title_shape=title_shape,
         lang_list=lang_list,
     )

@@ -44,7 +44,7 @@ language. Karigar AI does the rest.
 |---|---|---|
 | 📷 | **Photo** | Removes the cluttered background, composites onto a studio backdrop, corrects lighting — a catalog-grade shot from a workshop phone snap |
 | 🎙️ | **Voice** | Listens in **9 Indian languages**. No typing, no forms, no English required |
-| 🤖 | **Listing** | Writes title, description, material, category, technique, dimensions and search tags — always in English + Hindi + Kannada, plus the artisan's own language |
+| 🤖 | **Listing** | Writes title, description, material, category, technique, dimensions and search tags — always in English + Hindi + Kannada, plus the artisan's own language. Speak it, **or let AI draft the whole listing from the photo alone** (Gemini vision) |
 | ✓ | **Verified GI** | Matches the craft against the real **Geographical Indication registry** (~160 registered GIs). A verified match ≠ an LLM guess — it earns a green badge and a price premium |
 | 💰 | **Fair price** | A **grounded** number: a market median from comparable listings, a skill premium, and a **fair-wage floor** it can never price below. Shows every line so the artisan can argue with it |
 | 🚀 | **Publish everywhere** | **Publish once, reach every channel.** Real **ONDC RET10** catalog + QR storefront and a real **Shopify** product (Admin API); other channels are clearly-labelled demo adapters |
@@ -289,9 +289,12 @@ transparent demo adapters rather than faking a login.
 
 ```bash
 make help      # all available commands
-make doctor    # diagnose a broken setup
+make doctor    # diagnose setup + ping every live integration (Gemini/Shopify)
 make demo      # demo-day checklist + your LAN IP
 ```
+
+> `make doctor` (or `python backend/scripts/doctor.py`) reports which
+> integrations are live vs mock — the same status is on `GET /api/health`.
 
 **Two rules:** `main` is always demoable, and **never commit an API key.**
 

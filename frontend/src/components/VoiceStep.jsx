@@ -44,6 +44,19 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
     }
   }
 
+  // Photo-only path: no words needed — Gemini vision identifies the craft from
+  // the enhanced photo and drafts the (editable) listing.
+  async function describeFromPhoto() {
+    setBusy(true);
+    try {
+      const listing = await generateListing({ transcript: "", language: lang, image_b64: imageB64 });
+      setSource?.(getLastSource());
+      onDone("", listing);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (busy) {
     return (
       <div className="min-h-full flex items-center justify-center">
@@ -91,6 +104,19 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
       <button className="btn-primary" onClick={generate} disabled={!transcript.trim()}>
         {t("generate", lang)} ✨
       </button>
+
+      {imageB64 && (
+        <>
+          <div className="flex items-center gap-3 my-3">
+            <span className="h-px flex-1 bg-clay-200" />
+            <span className="text-xs text-clay-400">{t("orLabel", lang)}</span>
+            <span className="h-px flex-1 bg-clay-200" />
+          </div>
+          <button className="btn-ghost !mt-0" onClick={describeFromPhoto}>
+            ✨ {t("aiDescribe", lang)}
+          </button>
+        </>
+      )}
     </div>
   );
 }
