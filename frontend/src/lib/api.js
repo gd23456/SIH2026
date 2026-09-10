@@ -45,6 +45,21 @@ export function isNativeApp() {
 }
 
 /**
+ * Open a URL outside the app.
+ *
+ * `target="_blank"` looks like it works and doesn't: Capacitor's WebView is
+ * created with multiple-window support disabled, so on a device the tap is
+ * silently swallowed and the storefront never opens. Navigating the current
+ * frame to a foreign origin IS handled — Capacitor intercepts it and hands the
+ * URL to the system browser, leaving the app running behind it.
+ */
+export function openExternal(url) {
+  if (!url) return;
+  if (isNative()) window.location.href = url;
+  else window.open(url, "_blank", "noopener");
+}
+
+/**
  * Probe a backend without falling back to demo data.
  *
  * Every other call in this file silently degrades to canned data, which is

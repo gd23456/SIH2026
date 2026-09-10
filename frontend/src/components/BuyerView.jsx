@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { searchListings, getLastSource } from "../lib/api";
+import { searchListings, getLastSource, openExternal } from "../lib/api";
 import { Spinner, ConfirmSheet } from "./ui";
 import ProductImage from "./ProductImage";
 
@@ -44,6 +44,8 @@ function BuyerCard({ row, lang, onDemoTap }) {
     </div>
   );
 
+  // Offline demo rows were never persisted, so there's no page behind them —
+  // tapping explains that instead of opening a 404.
   if (disabled) {
     return (
       <button type="button" onClick={onDemoTap} className="block w-full text-left">
@@ -51,10 +53,16 @@ function BuyerCard({ row, lang, onDemoTap }) {
       </button>
     );
   }
+
+  // Not an <a target="_blank">: Capacitor's WebView has multiple-window
+  // support off, so on a device that tap does nothing at all.
   return (
-    <a href={row.storefront_url} target="_blank" rel="noreferrer" className="block">
+    <button
+      onClick={() => openExternal(row.storefront_url)}
+      className="block w-full text-left active:scale-[0.98] transition"
+    >
       {card}
-    </a>
+    </button>
   );
 }
 
