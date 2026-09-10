@@ -98,6 +98,14 @@ export const getLastSource = () => _lastSource;
 // answered even when the backend itself is reachable. jfetch captures it here.
 let _lastBackendMode = null;
 
+// Cheap calls (health, listings, channels) answer in well under a second, so
+// 12s is generous for them. The AI endpoints are a different story — measured
+// against live Gemini, generate-listing took 27s and price took 25s. At the old
+// shared 12s ceiling those calls were aborted mid-flight and silently fell back
+// to canned data, which looked exactly like "the AI is broken" even with a
+// valid key. Slow is fine here; wrong is not.
+const AI_TIMEOUT_MS = 45000;
+
 async function jfetch(path, opts = {}, timeoutMs = 12000) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -164,7 +172,7 @@ export async function enhanceImage(file) {
   try {
     const fd = new FormData();
     fd.append("file", upload);
-    const data = await jfetch("/api/enhance-image", { method: "POST", body: fd }, 25000);
+    const data = await jfetch("/api/enhance-image", { method: "POST", body: fd }, AI_TIMEOUT_MS);
     _lastSource = "live";
     return data;
   } catch (e) {
@@ -190,7 +198,7 @@ export async function generateListing({ transcript, language, image_b64 }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript, language, image_b64 }),
-    });
+    }, AI_TIMEOUT_MS);
     // Honest badge: "AI" only when real Gemini answered, else the mock ran.
     _lastSource = _lastBackendMode === "mock" ? "demo" : "live";
     return data;
@@ -217,7 +225,7 @@ export async function getPrice(listing) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    }, AI_TIMEOUT_MS);
     _lastSource = _lastBackendMode === "mock" ? "demo" : "live";
     return data;
   } catch {
