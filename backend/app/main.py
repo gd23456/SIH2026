@@ -395,6 +395,14 @@ def search(
     return [_summary(row, base) for row in repo.search_listings(session, q, limit=limit)]
 
 
+def _img_mime(raw: bytes) -> str:
+    """Sniff PNG vs JPEG from magic bytes so we label stored photos correctly
+    (seeded demo photos are JPEG; app-uploaded ones are PNG)."""
+    if raw[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    return "image/png"
+
+
 @app.get("/api/listings/{listing_id}/image")
 def listing_image(listing_id: str, session: Session = Depends(get_session)):
     """The stored photo as a real PNG.
@@ -411,7 +419,7 @@ def listing_image(listing_id: str, session: Session = Depends(get_session)):
         raw = base64.b64decode(row.image_b64, validate=True)
     except (ValueError, binascii.Error) as e:
         raise HTTPException(500, "Stored image is not valid base64") from e
-    return Response(content=raw, media_type="image/png",
+    return Response(content=raw, media_type=_img_mime(raw),
                     headers={"Cache-Control": "public, max-age=300"})
 
 
@@ -440,6 +448,13 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
 
     repo.bump_counter(session, listing_id, "views")  # impact: storefront opened
 
+    img_mime = "image/png"
+    if listing.image_b64:
+        try:
+            img_mime = _img_mime(base64.b64decode(listing.image_b64[:8]))  # 8 chars → 6 bytes
+        except Exception:
+            img_mime = "image/png"
+
     artisan = repo.get_artisan(session, listing.artisan_id)
 
     # The page had no way to actually buy anything. Until we are a registered
@@ -459,6 +474,7 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
         context={
             "listing": listing,
             "artisan": artisan,
+            "image_mime": img_mime,
             # Relative on purpose: the page is already being served from the
             # right origin, and an absolute URL would break if the page were
             # reached via a different host than the one that minted it.
