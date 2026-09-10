@@ -85,6 +85,63 @@ class PublishRequest(BaseModel):
     image_b64: str | None = None
     artisan_name: str = "Artisan"
     location: str = "India"
+    # Phase 3: the signed-in artisan and the channels to publish to. ONDC is
+    # always the real one; anything else is recorded as a demo publish.
+    artisan_uid: str | None = None
+    artisan_email: str = ""
+    artisan_photo_url: str = ""
+    channels: list[str] = ["ondc"]
+
+
+# --- accounts (Phase 3) ----------------------------------------------------
+
+
+class ArtisanUpsert(BaseModel):
+    uid: str = Field(..., description="Firebase uid, or a local demo uid")
+    # Empty = "not provided": upsert only overwrites stored fields with
+    # non-empty values, so a partial edit never blanks name/photo/etc.
+    name: str = ""
+    email: str = ""
+    phone: str = ""
+    photo_url: str = ""
+    location: str = ""
+    plan: str = ""  # only overwrites when non-empty
+
+
+class ArtisanOut(BaseModel):
+    id: int | None = None
+    uid: str | None = None
+    name: str = "Artisan"
+    email: str = ""
+    phone: str = ""
+    photo_url: str = ""
+    location: str = ""
+    plan: str = "free"
+    listing_count: int = 0
+
+
+# --- channels (Phase 3) ----------------------------------------------------
+
+
+class ChannelInfo(BaseModel):
+    id: str
+    name: str
+    kind: str  # "live" | "demo" | "coming_soon"
+    logo: str = ""
+    note: str = ""
+    connected: bool = False
+    mode: str = "demo"
+
+
+class ChannelResult(BaseModel):
+    channel_id: str
+    name: str
+    kind: str
+    mode: str
+    status: str
+    ref: str = ""
+    storefront_url: str | None = None
+    qr_url: str | None = None
 
 
 class ListingSummary(BaseModel):
@@ -115,3 +172,5 @@ class PublishResponse(BaseModel):
     ondc_catalog: dict
     whatsapp_share_url: str
     storefront_url: str
+    # Per-channel outcome — ONDC live, the rest recorded as demo publishes.
+    channel_results: list[ChannelResult] = []

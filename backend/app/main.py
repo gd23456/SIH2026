@@ -32,12 +32,19 @@ from .config import get_settings
 from .db import get_session, init_db
 from .db import repository as repo
 from .schemas import (
+    ArtisanOut,
+    ArtisanUpsert,
+    ChannelInfo,
+    ChannelResult,
     GenerateListingRequest,
     ListingSummary,
     PriceRequest,
     PriceResponse,
     PublishRequest,
     PublishResponse,
+)
+from .services import (
+    channels as channels_service,
 )
 from .services import (
     gemini_service,
@@ -170,16 +177,112 @@ def publish(
         image_b64=req.image_b64,
         artisan_name=req.artisan_name,
         location=req.location,
+        artisan_uid=req.artisan_uid,
+        artisan_email=req.artisan_email,
+        artisan_photo_url=req.artisan_photo_url,
     )
 
-    storefront = f"{_base_url(request)}/p/{listing_id}"
+    base = _base_url(request)
+    storefront = f"{base}/p/{listing_id}"
     title = listing.get("title", {}).get("en", "Handcrafted Product")
+
+    # ONDC is always the real channel; anything else the artisan selected is
+    # recorded as an honest demo publish. De-dupe and guarantee ondc is present.
+    selected = list(dict.fromkeys(["ondc", *(req.channels or [])]))
+    results: list[ChannelResult] = []
+    for cid in selected:
+        ch = channels_service.get_channel(cid)
+        if ch is None:
+            continue
+        if channels_service.is_live(cid):
+            repo.record_channel_publish(
+                session, listing_id=listing_id, channel_id=cid,
+                status="Live on ONDC", mode="live", channel_ref=listing_id,
+            )
+            results.append(ChannelResult(
+                channel_id=cid, name=ch["name"], kind="live", mode="live",
+                status="Live on ONDC", ref=listing_id,
+                storefront_url=storefront, qr_url=f"{base}/api/qr/{listing_id}",
+            ))
+        else:
+            ref = channels_service.synthetic_ref(cid)
+            repo.record_channel_publish(
+                session, listing_id=listing_id, channel_id=cid,
+                status=channels_service.demo_status(cid), mode="demo", channel_ref=ref,
+            )
+            results.append(ChannelResult(
+                channel_id=cid, name=ch["name"], kind="demo", mode="demo",
+                status=channels_service.demo_status(cid), ref=ref,
+            ))
+
     return PublishResponse(
         listing_id=listing_id,
         status="PUBLISHED",
         ondc_catalog=catalog,
         whatsapp_share_url=ondc_service.whatsapp_share(title, req.price, storefront),
         storefront_url=storefront,
+        channel_results=results,
+    )
+
+
+@app.post("/api/artisan", response_model=ArtisanOut)
+def upsert_artisan(req: ArtisanUpsert, session: Session = Depends(get_session)):
+    """Create or update the signed-in artisan's account (keyed by uid)."""
+    artisan = repo.upsert_artisan(
+        session, uid=req.uid, name=req.name, email=req.email, phone=req.phone,
+        photo_url=req.photo_url, location=req.location, plan=req.plan,
+    )
+    return _artisan_out(session, artisan)
+
+
+@app.get("/api/artisan/{uid}", response_model=ArtisanOut)
+def get_artisan_by_uid(uid: str, session: Session = Depends(get_session)):
+    artisan = repo.get_artisan_by_uid(session, uid)
+    if artisan is None:
+        raise HTTPException(404, "No such artisan")
+    return _artisan_out(session, artisan)
+
+
+@app.get("/api/channels", response_model=list[ChannelInfo])
+def list_channels(uid: str = "", session: Session = Depends(get_session)):
+    """The channel registry, annotated with this artisan's connection status.
+
+    ONDC is always live-connected; the rest reflect whether the artisan has
+    flipped the (simulated) connect toggle.
+    """
+    artisan = repo.get_artisan_by_uid(session, uid) if uid else None
+    connected = repo.connected_channels(session, artisan.id if artisan else None)
+    out: list[ChannelInfo] = []
+    for c in channels_service.all_channels():
+        is_live = c["kind"] == "live"
+        out.append(ChannelInfo(
+            id=c["id"], name=c["name"], kind=c["kind"], logo=c["logo"], note=c["note"],
+            connected=is_live or c["id"] in connected,
+            mode="live" if is_live else "demo",
+        ))
+    return out
+
+
+@app.post("/api/channels/{channel_id}/connect")
+def connect_channel(channel_id: str, req: ArtisanUpsert, session: Session = Depends(get_session)):
+    """Simulated connect — flips a status flag. NO credentials are collected."""
+    ch = channels_service.get_channel(channel_id)
+    if ch is None:
+        raise HTTPException(404, "Unknown channel")
+    artisan = repo.upsert_artisan(session, uid=req.uid, name=req.name)
+    mode = "live" if ch["kind"] == "live" else "demo"
+    repo.set_channel_connection(
+        session, artisan_id=artisan.id, channel_id=channel_id, connected=True, mode=mode,
+    )
+    return {"connected": True, "mode": mode, "channel_id": channel_id}
+
+
+def _artisan_out(session: Session, artisan) -> ArtisanOut:
+    return ArtisanOut(
+        id=artisan.id, uid=artisan.uid, name=artisan.name, email=artisan.email,
+        phone=artisan.phone, photo_url=artisan.photo_url, location=artisan.location,
+        plan=artisan.plan or "free",
+        listing_count=repo.listing_count(session, artisan.id),
     )
 
 

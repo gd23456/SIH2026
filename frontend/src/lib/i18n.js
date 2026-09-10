@@ -246,6 +246,49 @@ const STR = {
     gu: "કોઈ સર્વર વિના આખો પ્રવાહ ચલાવો",
     or: "କୌଣସି ସର୍ଭର ବିନା ସମ୍ପୂର୍ଣ୍ଣ ପ୍ରବାହ ଚଲାନ୍ତୁ",
   },
+  // ---- Phase 3: auth / profile / channels / plans (en/hi/kn; others fall back) ----
+  signIn: { en: "Sign in to sell", hi: "बेचने के लिए साइन इन करें", kn: "ಮಾರಾಟಕ್ಕೆ ಸೈನ್ ಇನ್ ಮಾಡಿ" },
+  signInSub: {
+    en: "Your products, your account — on every device",
+    hi: "आपके उत्पाद, आपका खाता — हर डिवाइस पर",
+    kn: "ನಿಮ್ಮ ಉತ್ಪನ್ನಗಳು, ನಿಮ್ಮ ಖಾತೆ — ಪ್ರತಿ ಸಾಧನದಲ್ಲಿ",
+  },
+  continueGoogle: { en: "Continue with Google", hi: "Google से जारी रखें", kn: "Google ನೊಂದಿಗೆ ಮುಂದುವರಿಸಿ" },
+  continuePhone: { en: "Continue with phone number", hi: "फ़ोन नंबर से जारी रखें", kn: "ಫೋನ್ ಸಂಖ್ಯೆಯೊಂದಿಗೆ ಮುಂದುವರಿಸಿ" },
+  phoneNumber: { en: "Phone number", hi: "फ़ोन नंबर", kn: "ಫೋನ್ ಸಂಖ್ಯೆ" },
+  sendCode: { en: "Send code", hi: "कोड भेजें", kn: "ಕೋಡ್ ಕಳುಹಿಸಿ" },
+  enterCode: { en: "Enter the 6-digit code", hi: "6 अंकों का कोड डालें", kn: "6-ಅಂಕಿಯ ಕೋಡ್ ನಮೂದಿಸಿ" },
+  verify: { en: "Verify", hi: "सत्यापित करें", kn: "ಪರಿಶೀಲಿಸಿ" },
+  skipDemo: { en: "Skip for now (demo)", hi: "अभी छोड़ें (डेमो)", kn: "ಈಗ ಬಿಟ್ಟುಬಿಡಿ (ಡೆಮೊ)" },
+  signingIn: { en: "Signing in…", hi: "साइन इन हो रहा है…", kn: "ಸೈನ್ ಇನ್ ಆಗುತ್ತಿದೆ…" },
+  authError: { en: "Sign-in failed — try again or skip", hi: "साइन इन विफल — फिर से या छोड़ें", kn: "ಸೈನ್ ಇನ್ ವಿಫಲ — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಬಿಟ್ಟುಬಿಡಿ" },
+  // profile
+  profile: { en: "Profile", hi: "प्रोफ़ाइल", kn: "ಪ್ರೊಫೈಲ್" },
+  yourName: { en: "Name", hi: "नाम", kn: "ಹೆಸರು" },
+  yourLocation: { en: "Location", hi: "स्थान", kn: "ಸ್ಥಳ" },
+  signOut: { en: "Sign out", hi: "साइन आउट", kn: "ಸೈನ್ ಔಟ್" },
+  edit: { en: "Edit", hi: "संपादित करें", kn: "ಸಂಪಾದಿಸಿ" },
+  demoAccount: { en: "Demo account", hi: "डेमो खाता", kn: "ಡೆಮೊ ಖಾತೆ" },
+  plan: { en: "Plan", hi: "योजना", kn: "ಯೋಜನೆ" },
+  // channels
+  yourChannels: { en: "Your channels", hi: "आपके चैनल", kn: "ನಿಮ್ಮ ಚಾನೆಲ್‌ಗಳು" },
+  publishTo: { en: "Publish to", hi: "यहाँ प्रकाशित करें", kn: "ಇಲ್ಲಿ ಪ್ರಕಟಿಸಿ" },
+  publishOnce: { en: "Publish once. Reach every channel.", hi: "एक बार प्रकाशित करें। हर चैनल तक पहुँचें।", kn: "ಒಮ್ಮೆ ಪ್ರಕಟಿಸಿ. ಪ್ರತಿ ಚಾನೆಲ್ ತಲುಪಿ." },
+  connect: { en: "Connect", hi: "जोड़ें", kn: "ಸಂಪರ್ಕಿಸಿ" },
+  demoConnection: { en: "Demo connection", hi: "डेमो कनेक्शन", kn: "ಡೆಮೊ ಸಂಪರ್ಕ" },
+  liveChannel: { en: "Live", hi: "लाइव", kn: "ಲೈವ್" },
+  whereLive: { en: "Where you're live", hi: "आप कहाँ लाइव हैं", kn: "ನೀವು ಎಲ್ಲಿ ಲೈವ್" },
+  // plans
+  plans: { en: "Plans", hi: "योजनाएँ", kn: "ಯೋಜನೆಗಳು" },
+  currentPlan: { en: "Current plan", hi: "वर्तमान योजना", kn: "ಪ್ರಸ್ತುತ ಯೋಜನೆ" },
+  upgradePro: { en: "Upgrade to Pro", hi: "Pro में अपग्रेड करें", kn: "Pro ಗೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ" },
+  proActive: { en: "Karigar Pro is active 🎉", hi: "Karigar Pro सक्रिय है 🎉", kn: "Karigar Pro ಸಕ್ರಿಯವಾಗಿದೆ 🎉" },
+  billingSoon: {
+    en: "No charge now — Google Play billing is coming soon.",
+    hi: "अभी कोई शुल्क नहीं — Google Play बिलिंग जल्द आ रही है।",
+    kn: "ಈಗ ಶುಲ್ಕವಿಲ್ಲ — Google Play ಬಿಲ್ಲಿಂಗ್ ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ.",
+  },
+  privacy: { en: "Privacy policy", hi: "गोपनीयता नीति", kn: "ಗೌಪ್ಯತಾ ನೀತಿ" },
 };
 
 export function t(key, lang = "en") {

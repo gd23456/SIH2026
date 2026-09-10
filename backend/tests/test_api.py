@@ -531,6 +531,101 @@ def test_search_miss_returns_empty_list():
     assert rows == []
 
 
+# --- accounts (Phase 3) ----------------------------------------------------
+
+
+def test_artisan_upsert_and_fetch():
+    r = client.post("/api/artisan", json={
+        "uid": "uid-abc", "name": "Asha", "email": "asha@example.com",
+        "phone": "+919999999999", "location": "Mysuru",
+    })
+    assert r.status_code == 200
+    a = r.json()
+    assert a["uid"] == "uid-abc" and a["name"] == "Asha" and a["plan"] == "free"
+
+    # partial update must not blank other fields
+    client.post("/api/artisan", json={"uid": "uid-abc", "location": "Bengaluru"})
+    a2 = client.get("/api/artisan/uid-abc").json()
+    assert a2["location"] == "Bengaluru"
+    assert a2["name"] == "Asha"          # preserved
+    assert a2["email"] == "asha@example.com"
+
+
+def test_artisan_upgrade_to_pro():
+    client.post("/api/artisan", json={"uid": "uid-pro", "name": "Ravi"})
+    client.post("/api/artisan", json={"uid": "uid-pro", "plan": "pro"})
+    assert client.get("/api/artisan/uid-pro").json()["plan"] == "pro"
+
+
+def test_unknown_artisan_404s():
+    assert client.get("/api/artisan/nobody").status_code == 404
+
+
+# --- channels (Phase 3) ----------------------------------------------------
+
+
+def test_channels_list_marks_ondc_live_and_others_demo():
+    rows = client.get("/api/channels").json()
+    by_id = {c["id"]: c for c in rows}
+    assert by_id["ondc"]["kind"] == "live" and by_id["ondc"]["connected"] is True
+    assert by_id["meesho"]["kind"] == "demo"
+    # a fresh artisan has not connected the demo channels
+    assert by_id["meesho"]["connected"] is False
+
+
+def test_channel_connect_is_simulated_no_credentials():
+    client.post("/api/artisan", json={"uid": "uid-ch", "name": "Devi"})
+    r = client.post("/api/channels/meesho/connect", json={"uid": "uid-ch", "name": "Devi"})
+    assert r.status_code == 200
+    assert r.json() == {"connected": True, "mode": "demo", "channel_id": "meesho"}
+
+    rows = client.get("/api/channels?uid=uid-ch").json()
+    assert next(c for c in rows if c["id"] == "meesho")["connected"] is True
+
+
+def test_connect_unknown_channel_404s():
+    assert client.post("/api/channels/nope/connect", json={"uid": "x"}).status_code == 404
+
+
+def test_publish_to_multiple_channels():
+    """ONDC is really published (storefront URL); Meesho is a recorded demo."""
+    r = client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": 749,
+        "artisan_name": "Lakshmi", "location": "Bengaluru",
+        "channels": ["ondc", "meesho"],
+    })
+    assert r.status_code == 200
+    body = r.json()
+    results = {c["channel_id"]: c for c in body["channel_results"]}
+
+    assert results["ondc"]["kind"] == "live"
+    assert results["ondc"]["storefront_url"].endswith(f"/p/{body['listing_id']}")
+    assert results["meesho"]["kind"] == "demo"
+    assert "demo" in results["meesho"]["status"].lower()
+    assert results["meesho"]["ref"]                      # synthetic reference
+    assert results["meesho"]["storefront_url"] is None   # nothing real behind it
+
+
+def test_publish_always_includes_ondc_even_if_omitted():
+    body = client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": 749, "channels": ["meesho"],
+    }).json()
+    ids = [c["channel_id"] for c in body["channel_results"]]
+    assert "ondc" in ids
+
+
+def test_publish_attaches_signed_in_artisan():
+    client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": 749,
+        "artisan_name": "Meera", "location": "Jaipur",
+        "artisan_uid": "uid-publisher", "artisan_email": "meera@example.com",
+        "channels": ["ondc"],
+    })
+    a = client.get("/api/artisan/uid-publisher").json()
+    assert a["name"] == "Meera"
+    assert a["listing_count"] >= 1
+
+
 def test_listing_image_404s_without_a_photo():
     body = _publish()  # fixture carries no image
     assert client.get(f"/api/listings/{body['listing_id']}/image").status_code == 404

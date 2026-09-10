@@ -3,7 +3,14 @@
 // - Demo: if the backend is unreachable OR demo mode is forced, uses
 //   client-side canned data so the app never breaks on stage / on-device.
 
-import { demoListing, demoListings, demoPrice, demoPublish, demoSearch } from "./demoData";
+import {
+  demoListing,
+  demoListings,
+  demoPrice,
+  demoPublish,
+  demoSearch,
+  demoChannels,
+} from "./demoData";
 
 function isNative() {
   return typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
@@ -167,22 +174,75 @@ export async function getPrice(listing) {
   }
 }
 
-export async function publish({ listing, price, image_b64, artisan_name, location }) {
+export async function publish({
+  listing, price, image_b64, artisan_name, location,
+  channels = ["ondc"], artisan_uid = null, artisan_email = "", artisan_photo_url = "",
+}) {
   if (forcedDemo()) {
     _lastSource = "demo";
-    return demoPublish(listing, price);
+    return demoPublish(listing, price, channels);
   }
   try {
     const data = await jfetch("/api/publish", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ listing, price, image_b64, artisan_name, location }),
+      body: JSON.stringify({
+        listing, price, image_b64, artisan_name, location,
+        channels, artisan_uid, artisan_email, artisan_photo_url,
+      }),
     });
     _lastSource = "live";
     return data;
   } catch {
     _lastSource = "demo";
-    return demoPublish(listing, price);
+    return demoPublish(listing, price, channels);
+  }
+}
+
+// ---- accounts + channels (Phase 3) ----------------------------------------
+
+/** Create/update the artisan account. Demo-safe: echoes back locally on failure. */
+export async function upsertArtisan(payload) {
+  try {
+    return await jfetch("/api/artisan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { ...payload, plan: payload.plan || "free", listing_count: 0, _demo: true };
+  }
+}
+
+export async function getArtisan(uid) {
+  try {
+    return await jfetch(`/api/artisan/${encodeURIComponent(uid)}`);
+  } catch {
+    return null;
+  }
+}
+
+/** Channel registry + this artisan's connection status. Falls back to demo. */
+export async function listChannels(uid = "") {
+  if (forcedDemo()) return demoChannels();
+  try {
+    return await jfetch(`/api/channels?uid=${encodeURIComponent(uid)}`);
+  } catch {
+    return demoChannels();
+  }
+}
+
+/** Simulated connect — never sends credentials. */
+export async function connectChannel(channelId, { uid, name }) {
+  if (forcedDemo()) return { connected: true, mode: "demo", channel_id: channelId };
+  try {
+    return await jfetch(`/api/channels/${encodeURIComponent(channelId)}/connect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid, name }),
+    });
+  } catch {
+    return { connected: true, mode: "demo", channel_id: channelId };
   }
 }
 

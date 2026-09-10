@@ -14,11 +14,53 @@ from sqlmodel import Field, SQLModel
 
 
 class Artisan(SQLModel, table=True):
-    """Whoever made the thing. Deliberately thin — no auth in Phase 1."""
+    """Whoever made the thing.
+
+    Phase 3 gives them an account: uid/email/phone come from Firebase (or the
+    local demo account), and `plan` drives the Free vs Pro badge. Still thin —
+    no passwords are ever stored here; auth lives in Firebase.
+    """
 
     id: int | None = Field(default=None, primary_key=True)
+    uid: str | None = Field(default=None, index=True)  # Firebase uid or demo uid
     name: str = Field(index=True)
     location: str = ""
+    email: str = ""
+    phone: str = ""
+    photo_url: str = ""
+    plan: str = "free"  # "free" | "pro"
+
+
+class ChannelConnection(SQLModel, table=True):
+    """An artisan's connection to a sales channel.
+
+    ONDC is a real connection; the rest are simulated ("demo") — this table
+    only records that the artisan flipped the toggle, never any credentials.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    artisan_id: int | None = Field(default=None, foreign_key="artisan.id", index=True)
+    channel_id: str = Field(index=True)
+    connected: bool = True
+    mode: str = "demo"  # "live" (ONDC) | "demo"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class ChannelPublish(SQLModel, table=True):
+    """One (listing, channel) publish record.
+
+    ONDC publishes are real (storefront + QR); the rest are recorded as
+    "published (demo)" with a synthetic reference so the per-channel result
+    list is believable without ever calling an external marketplace.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    listing_id: str = Field(index=True)
+    channel_id: str = Field(index=True)
+    status: str = ""            # e.g. "Live on ONDC" | "Published (demo)"
+    mode: str = "demo"          # "live" | "demo"
+    channel_ref: str = ""       # synthetic per-channel id
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class Listing(SQLModel, table=True):

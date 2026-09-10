@@ -74,6 +74,38 @@ there's no wifi, the app still demos. **Demo mode is our stage insurance.**
 
 ---
 
+## Accounts & sign-in (Firebase — optional)
+
+The seller flow is gated by a login screen (Google or phone-OTP). **It is
+optional for the demo:** with no Firebase config the app runs a local
+**demo-account** mode, and **"Skip for now (demo)"** always works — a
+login/Firebase misconfig can never block the stage demo.
+
+To enable *real* sign-in, copy `frontend/.env.example` → `frontend/.env` and fill:
+
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project
+VITE_FIREBASE_APP_ID=1:...:web:...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+```
+
+1. Create a project at <https://console.firebase.google.com>.
+2. **Authentication → Sign-in method:** enable **Google** and **Phone**.
+3. **Authentication → Settings → Authorized domains:** add every origin the app
+   is served from — `localhost`, your laptop's LAN IP, and the Capacitor WebView
+   origin **`localhost`** (Android renders at `https://localhost`). Google popup
+   and phone-OTP reCAPTCHA are rejected from unlisted domains.
+4. On Android we use the Firebase **Web** SDK inside the WebView (Google popup +
+   phone OTP via reCAPTCHA) — **no** `google-services.json` / native plugin is
+   required, so the build is never blocked on native Firebase wiring.
+
+Values are read as `import.meta.env.VITE_FIREBASE_*`; `frontend/.env` is
+gitignored — never commit real keys.
+
+---
+
 ## Seed demo data (so the shelf is never empty on stage)
 
 "My Products" and the Buyer view read from the database. On a fresh clone they
@@ -222,6 +254,44 @@ cd frontend/android
 
 Install it with `adb install app-debug.apk`, or attach it to a GitHub Release
 so anyone can side-load it.
+
+### Signed release bundle (AAB) for the Play Store
+
+Play Store uploads are **.aab**, signed with your own upload keystore. Live
+Play Store publishing + Play Billing are a post-hackathon process; the steps:
+
+```bash
+# 1. Create an upload keystore once (keep the .jks + passwords safe, NEVER commit)
+keytool -genkey -v -keystore karigar-upload.jks -keyalg RSA -keysize 2048 \
+        -validity 10000 -alias karigar
+
+# 2. Point Gradle at it (e.g. via ~/.gradle/gradle.properties or signingConfigs):
+#    KARIGAR_STORE_FILE / KARIGAR_STORE_PASSWORD / KARIGAR_KEY_ALIAS / KARIGAR_KEY_PASSWORD
+
+# 3. Bump the version in android/app/build.gradle for each release:
+#    versionCode (integer, must increase) + versionName (e.g. "1.1.0")
+
+# 4. Build the signed bundle
+cd frontend
+npm run build && npx cap sync android
+cd android && ./gradlew bundleRelease
+# → app/build/outputs/bundle/release/app-release.aab  → upload to Play Console
+```
+
+Keystores and `*.jks` are gitignored — never commit them. See
+[docs/STORE_LISTING.md](STORE_LISTING.md) for the store copy + asset checklist,
+and [docs/PRIVACY.md](PRIVACY.md) for the required privacy policy.
+
+### App icon & splash
+
+App name (`Karigar AI`) and id (`ai.karigar.app`) are set in
+`frontend/capacitor.config.json` and `android/app/build.gradle`. To regenerate
+launcher icons + splash from a source image:
+
+```bash
+# put a 1024×1024 PNG at frontend/assets/icon.png (or use public/icon.svg)
+cd frontend && npx @capacitor/assets generate --android
+```
 
 ### Gradle build fails
 

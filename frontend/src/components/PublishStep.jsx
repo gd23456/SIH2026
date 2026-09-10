@@ -1,36 +1,116 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { publish, qrUrl } from "../lib/api";
+import { publish, qrUrl, listChannels } from "../lib/api";
 import { Spinner } from "./ui";
 import RemoteImage from "./RemoteImage";
 
-export default function PublishStep({ lang, listing, price, imageB64, onReset, onMyProducts, onBuyerView }) {
+// Publish once, reach every channel. ONDC is the one real channel (live
+// storefront + QR); the rest are honestly-labelled demo publishes. The artisan
+// picks channels, then sees a per-channel result list.
+
+export default function PublishStep({ lang, listing, price, imageB64, account, onReset, onMyProducts, onBuyerView }) {
+  const [phase, setPhase] = useState("select"); // select | publishing | done
+  const [channels, setChannels] = useState(null);
+  const [selected, setSelected] = useState(() => new Set(["ondc"]));
   const [res, setRes] = useState(null);
   const [showJson, setShowJson] = useState(false);
-  // If the QR image 404s or the host is unreachable, fall back to text
-  // rather than showing a broken-image icon on stage.
   const [qrOk, setQrOk] = useState(true);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      // small delay so the "publishing to ONDC" moment reads well on stage
-      const p = await publish({
-        listing,
-        price,
-        image_b64: imageB64,
-        artisan_name: "Rukmini Devi",
-        location: "Bengaluru, Karnataka",
-      });
-      await new Promise((r) => setTimeout(r, 900));
-      if (alive) setRes(p);
+      const chs = await listChannels(account?.uid || "");
+      if (!alive) return;
+      const list = Array.isArray(chs) ? chs : [];
+      setChannels(list);
+      // Pre-select ONDC + any already-connected channels.
+      setSelected(new Set(["ondc", ...list.filter((c) => c.connected).map((c) => c.id)]));
     })();
     return () => {
       alive = false;
     };
   }, []);
 
-  if (!res) {
+  function toggle(id) {
+    if (id === "ondc") return; // ONDC is locked on — the real channel
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function doPublish() {
+    setPhase("publishing");
+    const p = await publish({
+      listing,
+      price,
+      image_b64: imageB64,
+      channels: Array.from(selected),
+      artisan_name: account?.name || "Artisan",
+      location: "Bengaluru, Karnataka",
+      artisan_uid: account?.uid || null,
+      artisan_email: account?.email || "",
+      artisan_photo_url: account?.photoURL || "",
+    });
+    await new Promise((r) => setTimeout(r, 700)); // let the moment land
+    setRes(p);
+    setPhase("done");
+  }
+
+  const title = listing.title?.en || "Handcrafted Product";
+
+  // ---- channel selection ----
+  if (phase === "select") {
+    return (
+      <div className="flex flex-col min-h-full px-5 pb-8 fade-in">
+        <h2 className="text-2xl font-bold text-clay-900 mt-4">{t("publishTo", lang)}</h2>
+        <p className="text-clay-600 text-sm mt-1">{t("publishOnce", lang)}</p>
+
+        <div className="card p-2 mt-4 divide-y divide-clay-100">
+          {channels === null ? (
+            <Spinner label="…" />
+          ) : (
+            channels.map((ch) => {
+              const on = selected.has(ch.id);
+              const locked = ch.id === "ondc";
+              return (
+                <button
+                  key={ch.id}
+                  onClick={() => toggle(ch.id)}
+                  disabled={locked}
+                  className="w-full flex items-center gap-3 px-2 py-3 text-left"
+                >
+                  <span className="text-xl w-7 text-center">{ch.logo}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-clay-900">{ch.name}</p>
+                    {ch.kind === "live" ? (
+                      <span className="text-[10px] font-bold text-leaf">● {t("liveChannel", lang)}</span>
+                    ) : (
+                      <span className="text-[10px] text-clay-400">{t("demoConnection", lang)}</span>
+                    )}
+                  </div>
+                  <span
+                    className={`w-6 h-6 rounded-md flex items-center justify-center text-white text-sm ${
+                      on ? "bg-clay-600" : "bg-clay-100"
+                    } ${locked ? "opacity-90" : ""}`}
+                  >
+                    {on ? "✓" : ""}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        <button className="btn-primary mt-6" onClick={doPublish}>
+          {t("publish", lang)} 🚀
+        </button>
+      </div>
+    );
+  }
+
+  if (phase === "publishing" || !res) {
     return (
       <div className="min-h-full flex items-center justify-center">
         <Spinner label={t("publishing", lang)} />
@@ -38,7 +118,10 @@ export default function PublishStep({ lang, listing, price, imageB64, onReset, o
     );
   }
 
-  const title = listing.title?.en || "Handcrafted Product";
+  // ---- results ----
+  const results = res.channel_results || [];
+  const ondc = results.find((r) => r.kind === "live");
+  const demos = results.filter((r) => r.kind === "demo");
 
   return (
     <div className="flex flex-col min-h-full px-5 pb-8 fade-in">
@@ -64,12 +147,32 @@ export default function PublishStep({ lang, listing, price, imageB64, onReset, o
         </div>
       </div>
 
-      {res._demo || !qrOk ? (
-        <div className="card mt-6 p-5 text-center">
+      {/* per-channel results */}
+      <div className="card p-4 mt-4">
+        <p className="font-semibold text-clay-800 mb-2">{t("whereLive", lang)}</p>
+        <div className="space-y-2">
+          {results.map((r) => (
+            <div key={r.channel_id} className="flex items-center justify-between text-sm">
+              <span className="text-clay-800">
+                {r.kind === "live" ? "✅" : "✅"} {r.status}
+              </span>
+              {r.kind === "live" ? (
+                <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[10px]">{t("liveChannel", lang)}</span>
+              ) : (
+                <span className="chip !bg-haldi/20 !text-clay-700 !py-0.5 text-[10px]">{r.ref}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ONDC QR + storefront */}
+      {res._demo || !qrOk || !ondc ? (
+        <div className="card mt-4 p-5 text-center">
           <p className="text-sm text-clay-500">{t("qrUnavailable", lang)}</p>
         </div>
       ) : (
-        <div className="card mt-6 p-5 flex flex-col items-center">
+        <div className="card mt-4 p-5 flex flex-col items-center">
           <p className="font-bold text-clay-900">{t("scanToVisit", lang)}</p>
           <p className="text-xs text-clay-500 mt-1">{t("scanHint", lang)}</p>
           <RemoteImage

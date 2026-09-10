@@ -1,9 +1,15 @@
 import React from "react";
 import { LANGS, t } from "../lib/i18n";
+import { Avatar } from "./ui";
 
-export default function Welcome({ lang, setLang, onStart, onMyProducts, onBuyerView, onConnect }) {
+export default function Welcome({ lang, setLang, account, onStart, onMyProducts, onBuyerView, onProfile, onConnect }) {
   return (
-    <div className="flex flex-col min-h-full px-6 pt-10 pb-10 safe-top safe-bottom">
+    <div className="flex flex-col min-h-full px-6 pt-10 pb-10 safe-top safe-bottom relative">
+      {account && (
+        <div className="absolute top-4 right-5 z-10">
+          <Avatar account={account} size={38} onClick={onProfile} />
+        </div>
+      )}
       <div className="flex-1 flex flex-col items-center justify-center text-center fade-in py-6">
         <div className="h-20 w-20 rounded-3xl bg-clay-600 shadow-soft flex items-center justify-center mb-5">
           <svg viewBox="0 0 512 512" className="h-14 w-14">

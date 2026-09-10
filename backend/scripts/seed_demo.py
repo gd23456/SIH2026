@@ -15,6 +15,7 @@ up in the running server immediately.
 """
 from __future__ import annotations
 
+import base64
 import sys
 import uuid
 from pathlib import Path
@@ -35,14 +36,27 @@ from app.db import repository as repo  # noqa: E402
 from app.db.models import Artisan, Listing  # noqa: E402
 from app.services import gemini_service, gi_service, pricing_service  # noqa: E402
 
-# (spoken transcript, language, artisan, location) — one per craft. The mock is
-# keyword-aware, so these produce distinct, well-formed listings offline.
+# (spoken transcript, language, artisan, location, image-slug) — one per craft.
+# The mock is keyword-aware, so these produce distinct, well-formed listings
+# offline. The slug points at frontend/public/demo/<slug>.jpg if the team has
+# supplied a photo, so the seeded storefront looks premium too.
 DEMOS = [
-    ("Handmade bamboo storage basket, takes three days", "kn", "Lakshmi Devi", "Kollegala, Karnataka"),
-    ("Channapatna wooden spinning top toy set for kids", "kn", "Ravi Kumar", "Channapatna, Karnataka"),
-    ("Handloom Mysore silk saree with gold zari", "kn", "Saroja Bai", "Mysuru, Karnataka"),
-    ("Hand-thrown terracotta clay vase", "hi", "Meena Kumari", "Jaipur, Rajasthan"),
+    ("Handmade bamboo storage basket, takes three days", "kn", "Lakshmi Devi", "Kollegala, Karnataka", "bamboo"),
+    ("Channapatna wooden spinning top toy set for kids", "kn", "Ravi Kumar", "Channapatna, Karnataka", "channapatna"),
+    ("Handloom Mysore silk saree with gold zari", "kn", "Saroja Bai", "Mysuru, Karnataka", "silk"),
+    ("Hand-thrown terracotta clay vase", "hi", "Meena Kumari", "Jaipur, Rajasthan", "terracotta"),
 ]
+
+_DEMO_IMG_DIR = Path(__file__).resolve().parents[2] / "frontend" / "public" / "demo"
+
+
+def _load_image_b64(slug: str) -> str | None:
+    """Base64 of frontend/public/demo/<slug>.jpg|png if the team supplied one."""
+    for ext in (".jpg", ".jpeg", ".png"):
+        p = _DEMO_IMG_DIR / f"{slug}{ext}"
+        if p.exists():
+            return base64.b64encode(p.read_bytes()).decode()
+    return None
 
 
 def _reset(session: Session) -> None:
@@ -58,7 +72,7 @@ def seed(reset: bool = False) -> None:
         if reset:
             _reset(session)
 
-        for transcript, lang, artisan, location in DEMOS:
+        for transcript, lang, artisan, location, slug in DEMOS:
             listing = gemini_service.generate_listing(transcript, lang)
             gi = gi_service.verify(listing)
             listing["gi_verified"] = gi["matched"]
@@ -76,17 +90,19 @@ def seed(reset: bool = False) -> None:
             )["suggested_price"]
 
             listing_id = f"KARIGAR-{uuid.uuid4().hex[:8].upper()}"
+            image_b64 = _load_image_b64(slug)
             repo.save_listing(
                 session,
                 listing_id=listing_id,
                 listing=listing,
                 price=price,
-                image_b64=None,
+                image_b64=image_b64,
                 artisan_name=artisan,
                 location=location,
             )
             badge = f" ✓GI:{gi['name']}" if gi["matched"] else ""
-            print(f"• {listing_id}  ₹{price:<6} {listing['title']['en']}{badge}")
+            photo = " 📷" if image_b64 else ""
+            print(f"• {listing_id}  ₹{price:<6} {listing['title']['en']}{badge}{photo}")
 
     print("\nDone. Open 'My Products' or the Buyer view — the shelf is stocked.")
 

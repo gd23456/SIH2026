@@ -26,10 +26,32 @@ export function Stepper({ step, lang }) {
   );
 }
 
-export function Header({ step, lang, onBack, sourceBadge }) {
+/** Round profile avatar: photo if present, else initials on the clay brand. */
+export function Avatar({ account, size = 32, onClick, className = "" }) {
+  const name = account?.name || "Artisan";
+  const initial = name.trim().charAt(0).toUpperCase() || "A";
+  const style = { width: size, height: size };
+  const common = `rounded-full overflow-hidden flex items-center justify-center shrink-0 ${className}`;
+  const inner = account?.photoURL ? (
+    <img src={account.photoURL} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+  ) : (
+    <span className="bg-clay-600 text-white font-bold w-full h-full flex items-center justify-center"
+          style={{ fontSize: size * 0.44 }}>
+      {initial}
+    </span>
+  );
+  if (!onClick) return <div className={common} style={style}>{inner}</div>;
+  return (
+    <button onClick={onClick} className={`${common} active:scale-95 transition`} style={style} aria-label="Profile">
+      {inner}
+    </button>
+  );
+}
+
+export function Header({ step, lang, onBack, sourceBadge, account, onProfile }) {
   return (
     <div className="safe-top px-5 pt-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <button
           onClick={onBack}
           className={`text-clay-700 text-sm font-medium ${onBack ? "opacity-100" : "opacity-0 pointer-events-none"}`}
@@ -39,13 +61,14 @@ export function Header({ step, lang, onBack, sourceBadge }) {
         <span className="text-xs font-semibold tracking-wide text-clay-500">
           {t("step", lang)} {step} / 5
         </span>
-        {sourceBadge === "demo" ? (
-          <span className="chip !bg-haldi/20 !text-clay-800 !py-0.5 text-[11px]">demo</span>
-        ) : sourceBadge === "live" ? (
-          <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[11px]">● AI</span>
-        ) : (
-          <span className="w-10" />
-        )}
+        <div className="flex items-center gap-2">
+          {sourceBadge === "demo" ? (
+            <span className="chip !bg-haldi/20 !text-clay-800 !py-0.5 text-[11px]">demo</span>
+          ) : sourceBadge === "live" ? (
+            <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[11px]">● AI</span>
+          ) : null}
+          {onProfile && <Avatar account={account} size={30} onClick={onProfile} />}
+        </div>
       </div>
     </div>
   );

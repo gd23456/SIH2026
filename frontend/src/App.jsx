@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Welcome from "./components/Welcome";
+import AuthScreen from "./components/AuthScreen";
 import PhotoStep from "./components/PhotoStep";
 import VoiceStep from "./components/VoiceStep";
 import ReviewStep from "./components/ReviewStep";
@@ -7,8 +8,13 @@ import PriceStep from "./components/PriceStep";
 import PublishStep from "./components/PublishStep";
 import MyProducts from "./components/MyProducts";
 import BuyerView from "./components/BuyerView";
+import Profile from "./components/Profile";
+import Plans from "./components/Plans";
+import Privacy from "./components/Privacy";
 import ConnectSheet from "./components/ConnectSheet";
 import { Header, Stepper } from "./components/ui";
+import { loadStoredAccount } from "./lib/auth";
+import { upsertArtisan } from "./lib/api";
 
 export default function App() {
   const [lang, setLang] = useState("en");
@@ -18,8 +24,9 @@ export default function App() {
   const [listing, setListing] = useState(null);
   const [price, setPrice] = useState(0);
   const [source, setSource] = useState(null); // 'live' | 'demo'
-  const [view, setView] = useState("flow"); // 'flow' | 'products' | 'buyer'
+  const [view, setView] = useState("flow"); // flow | products | buyer | auth | profile | plans | privacy
   const [showConnect, setShowConnect] = useState(false);
+  const [account, setAccount] = useState(() => loadStoredAccount());
 
   function reset() {
     setStep(1);
@@ -27,6 +34,31 @@ export default function App() {
     setTranscript("");
     setListing(null);
     setPrice(0);
+  }
+
+  // Start selling: a returning signed-in artisan skips auth; everyone else
+  // sees the login screen first.
+  function startSelling() {
+    if (account) {
+      reset();
+      setView("flow");
+    } else {
+      setView("auth");
+    }
+  }
+
+  function onSignedIn(acc) {
+    setAccount(acc);
+    // Best-effort sync to the backend; demo-safe (never blocks the flow).
+    upsertArtisan({
+      uid: acc.uid,
+      name: acc.name,
+      email: acc.email || "",
+      phone: acc.phone || "",
+      photo_url: acc.photoURL || "",
+    }).catch(() => {});
+    reset();
+    setView("flow");
   }
 
   const canBack = step > 1 && step < 5;
@@ -38,13 +70,46 @@ export default function App() {
       <div className="w-full sm:max-w-[420px] bg-clay-50 sm:rounded-[2.5rem] sm:shadow-soft sm:overflow-hidden min-h-full sm:min-h-[860px] sm:max-h-[92vh] flex flex-col relative">
         {step > 0 && view === "flow" && (
           <>
-            <Header step={step} lang={lang} onBack={canBack ? back : null} sourceBadge={source} />
+            <Header
+              step={step}
+              lang={lang}
+              onBack={canBack ? back : null}
+              sourceBadge={source}
+              account={account}
+              onProfile={() => setView("profile")}
+            />
             <Stepper step={step} lang={lang} />
           </>
         )}
 
         <div className="flex-1 overflow-y-auto">
+          {view === "auth" && <AuthScreen lang={lang} onDone={onSignedIn} />}
+
           {view === "buyer" && <BuyerView lang={lang} onBack={() => setView("flow")} />}
+
+          {view === "profile" && (
+            <Profile
+              lang={lang}
+              account={account}
+              setAccount={setAccount}
+              onBack={() => setView("flow")}
+              onMyProducts={() => setView("products")}
+              onPlans={() => setView("plans")}
+              onPrivacy={() => setView("privacy")}
+              onSignedOut={() => {
+                setAccount(null);
+                setStep(0);
+                setView("flow");
+              }}
+            />
+          )}
+
+          {view === "plans" && (
+            <Plans lang={lang} account={account} setAccount={setAccount} onBack={() => setView("profile")} />
+          )}
+
+          {view === "privacy" && <Privacy lang={lang} onBack={() => setView("profile")} />}
+
           {view === "products" && (
             <MyProducts
               lang={lang}
@@ -59,9 +124,11 @@ export default function App() {
             <Welcome
               lang={lang}
               setLang={setLang}
-              onStart={() => setStep(1)}
+              account={account}
+              onStart={startSelling}
               onMyProducts={() => setView("products")}
               onBuyerView={() => setView("buyer")}
+              onProfile={() => setView("profile")}
               onConnect={() => setShowConnect(true)}
             />
           )}
@@ -107,6 +174,7 @@ export default function App() {
               listing={listing}
               price={price}
               imageB64={imageB64}
+              account={account}
               onReset={reset}
               onMyProducts={() => setView("products")}
               onBuyerView={() => setView("buyer")}
