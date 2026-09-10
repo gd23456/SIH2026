@@ -202,6 +202,20 @@ def publish(
     # live storefront + QR. Every other selected channel is recorded as an
     # honest, clearly-labelled demo publish.
     selected = list(dict.fromkeys(["ondc", *(req.channels or [])]))
+
+    # Plan gating, enforced here rather than only in the UI. A client can send
+    # any channel list it likes, so "Pro" has to mean something server-side or
+    # it means nothing at all.
+    #
+    # What gets gated is deliberate: listing is ALWAYS free and always reaches
+    # ONDC. We charge for extra distribution, never for the artisan's ability to
+    # sell — charging someone to list their first product would kill the
+    # adoption this whole thing depends on.
+    artisan = repo.get_artisan_by_uid(session, req.artisan_uid) if req.artisan_uid else None
+    is_pro = (artisan.plan if artisan else "free") == "pro"
+    locked = [] if is_pro else [c for c in selected if c not in FREE_CHANNELS]
+    selected = [c for c in selected if c not in locked]
+
     results: list[ChannelResult] = []
     for cid in selected:
         ch = channels_service.get_channel(cid)
@@ -236,6 +250,7 @@ def publish(
         whatsapp_share_url=ondc_service.whatsapp_share(title, req.price, storefront),
         storefront_url=storefront,
         channel_results=results,
+        locked_channels=locked,
     )
 
 
@@ -255,6 +270,14 @@ def get_artisan_by_uid(uid: str, session: Session = Depends(get_session)):
     if artisan is None:
         raise HTTPException(404, "No such artisan")
     return _artisan_out(session, artisan)
+
+
+# Channels every artisan gets, on any plan, forever.
+#
+# ONDC is deliberately in here: it is the real one, the one with a live
+# storefront and a QR a buyer can scan. Selling at all is free. Pro buys wider
+# distribution — the extra marketplaces — not the right to exist.
+FREE_CHANNELS = frozenset({"ondc"})
 
 
 _BASELINE_METHOD = (
@@ -282,6 +305,7 @@ def list_channels(uid: str = "", session: Session = Depends(get_session)):
     """
     artisan = repo.get_artisan_by_uid(session, uid) if uid else None
     connected = repo.connected_channels(session, artisan.id if artisan else None)
+    is_pro = (artisan.plan if artisan else "free") == "pro"
     out: list[ChannelInfo] = []
     for c in channels_service.all_channels():
         cid = c["id"]
@@ -291,6 +315,9 @@ def list_channels(uid: str = "", session: Session = Depends(get_session)):
             configured=live_ready,
             connected=live_ready or cid in connected,
             mode="live" if live_ready else "demo",
+            # Mirrors the gate publish() enforces, so the UI shows a lock rather
+            # than a checkbox the backend would silently ignore.
+            requires_pro=not is_pro and cid not in FREE_CHANNELS,
         ))
     return out
 

@@ -145,6 +145,9 @@ class ChannelInfo(BaseModel):
     mode: str = "demo"
     # True for the real live channel (ONDC); False for the demo adapters.
     configured: bool = True
+    # True when this channel needs Karigar Pro and the artisan is on Free, so
+    # the UI can show a lock instead of a checkbox the backend would ignore.
+    requires_pro: bool = False
 
 
 class ChannelResult(BaseModel):
@@ -188,3 +191,7 @@ class PublishResponse(BaseModel):
     storefront_url: str
     # Per-channel outcome — ONDC live, the rest recorded as demo publishes.
     channel_results: list[ChannelResult] = []
+    # Channels the artisan selected but their plan doesn't cover. The publish
+    # still succeeds on the channels they DO have; the UI turns this into an
+    # upgrade prompt rather than a failure.
+    locked_channels: list[str] = []

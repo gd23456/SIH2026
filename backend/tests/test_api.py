@@ -738,10 +738,17 @@ def test_connect_unknown_channel_404s():
 
 
 def test_publish_to_multiple_channels():
-    """ONDC is really published (storefront URL); Meesho is a recorded demo."""
+    """ONDC is really published (storefront URL); Meesho is a recorded demo.
+
+    Uses a Pro artisan: extra channels are a paid feature, so a Free publish
+    would legitimately drop Meesho. That gate has its own tests below.
+    """
+    client.post("/api/artisan", json={"uid": "multi-chan", "name": "Lakshmi"})
+    client.post("/api/artisan", json={"uid": "multi-chan", "plan": "pro"})
     r = client.post("/api/publish", json={
         "listing": LISTING_FIXTURE, "price": 749,
         "artisan_name": "Lakshmi", "location": "Bengaluru",
+        "artisan_uid": "multi-chan",
         "channels": ["ondc", "meesho"],
     })
     assert r.status_code == 200
@@ -797,6 +804,10 @@ def test_storefront_view_increments_the_counter():
 
 def test_impact_sums_uplift_and_reach():
     uid = "uid-impact-2"
+    # Pro, so the second channel is genuinely reached and there is something to
+    # aggregate — otherwise this silently becomes a test of the plan gate.
+    client.post("/api/artisan", json={"uid": uid, "name": "Nadia"})
+    client.post("/api/artisan", json={"uid": uid, "plan": "pro"})
     client.post("/api/publish", json={
         "listing": LISTING_FIXTURE, "price": 1000, "artisan_uid": uid,
         "artisan_name": "Nadia", "location": "Kutch", "channels": ["ondc", "meesho"],
@@ -820,3 +831,65 @@ def test_impact_unknown_artisan_is_zeroed_not_error():
         "total_scans": 0, "fair_value_uplift": 0, "currency": "INR",
         "baseline_method": imp["baseline_method"],
     }
+
+
+# --- plan gating -----------------------------------------------------------
+
+
+def test_free_plan_publishes_to_ondc_only():
+    """Free must still publish — listing is never gated, only extra reach is.
+
+    The gate lives in the endpoint, not the UI: a client can send any channel
+    list it likes, so "Pro" has to mean something server-side.
+    """
+    client.post("/api/artisan", json={"uid": "freeuser", "name": "Free Artisan"})
+    r = client.post(
+        "/api/publish",
+        json={
+            "listing": LISTING_FIXTURE,
+            "price": 749,
+            "artisan_uid": "freeuser",
+            "channels": ["ondc", "meesho", "myntra", "whatsapp"],
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+
+    published = [c["channel_id"] for c in body["channel_results"]]
+    assert published == ["ondc"], "free plan must still reach ONDC"
+    assert set(body["locked_channels"]) == {"meesho", "myntra", "whatsapp"}
+    # the publish itself succeeded — a locked channel is not a failure
+    assert body["status"] == "PUBLISHED"
+    assert body["storefront_url"]
+
+
+def test_pro_plan_unlocks_every_channel():
+    client.post("/api/artisan", json={"uid": "prouser", "name": "Pro Artisan"})
+    client.post("/api/artisan", json={"uid": "prouser", "plan": "pro"})
+    r = client.post(
+        "/api/publish",
+        json={
+            "listing": LISTING_FIXTURE,
+            "price": 749,
+            "artisan_uid": "prouser",
+            "channels": ["ondc", "meesho", "myntra", "whatsapp"],
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+    published = {c["channel_id"] for c in body["channel_results"]}
+    assert published == {"ondc", "meesho", "myntra", "whatsapp"}
+    assert body["locked_channels"] == []
+
+
+def test_channels_endpoint_marks_pro_only_for_free_users():
+    """The picker needs to show a lock, not a checkbox publish() would ignore."""
+    client.post("/api/artisan", json={"uid": "freeuser2", "name": "Free Two"})
+    rows = client.get("/api/channels", params={"uid": "freeuser2"}).json()
+    by_id = {c["id"]: c for c in rows}
+    assert by_id["ondc"]["requires_pro"] is False, "ONDC is free forever"
+    assert by_id["meesho"]["requires_pro"] is True
+
+    client.post("/api/artisan", json={"uid": "freeuser2", "plan": "pro"})
+    rows = client.get("/api/channels", params={"uid": "freeuser2"}).json()
+    assert all(c["requires_pro"] is False for c in rows)
