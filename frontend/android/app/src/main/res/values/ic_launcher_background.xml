@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Adaptive-icon background: the Karigar clay-600 brand tile, so the
-         launcher icon matches the mark on the Welcome screen. -->
-    <color name="ic_launcher_background">#a4652f</color>
+    <!-- Adaptive-icon background: sampled from the Karigar AI logo tile so
+         the launcher icon matches the mark used in-app. -->
+    <color name="ic_launcher_background">#723d17</color>
 </resources>
