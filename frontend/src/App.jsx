@@ -65,6 +65,15 @@ export default function App() {
 
   // Step 1 goes back to Welcome rather than nowhere; step 5 is a finished
   // listing, so its "back" is the home button instead.
+  // Reset the scroll container on every step/view change. It is one persistent
+  // scrolling div, so after scrolling down a long step (the review listing, say)
+  // the NEXT step opened already scrolled to its bottom — which on the price
+  // step is empty space, and reads as a screen that failed to load.
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [step, view]);
+
   const canBack = step >= 1 && step < 5;
   const back = () => (step === 1 ? goHome() : setStep((s) => Math.max(1, s - 1)));
 
@@ -150,7 +159,7 @@ export default function App() {
           </>
         )}
 
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {view === "auth" && <AuthScreen lang={lang} onDone={onSignedIn} />}
 
           {view === "buyer" && <BuyerView lang={lang} onBack={() => setView("flow")} />}
@@ -246,6 +255,7 @@ export default function App() {
               onReset={reset}
               onMyProducts={() => setView("products")}
               onBuyerView={() => setView("buyer")}
+              onPlans={() => setView("plans")}
             />
           )}
         </div>
