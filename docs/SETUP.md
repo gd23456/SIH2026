@@ -39,12 +39,15 @@ Verify the backend: <http://localhost:8000/api/health>
 
 ### Why Python 3.11 specifically
 
-`onnxruntime` (which `rembg` needs for background removal) does not publish
-wheels for every new Python release the moment it lands. On a newer Python,
+`onnxruntime` (which `rembg` needs for background removal) historically lagged
+on brand-new Python releases. Recent onnxruntime (1.20+) now ships wheels for
+3.11–3.13 — **true background removal is verified working on Python 3.13 with
+onnxruntime 1.24** — but a very new release can still lag, in which case
 `pip install -r requirements-ai.txt` fails with a build error.
 
 The core app doesn't care — that's why the heavy deps are in a separate file.
-But if you want true background removal, use 3.11.
+If the AI install fails on your Python, fall back to 3.11; the studio-composite
+path (white balance + clarity + unsharp) keeps working meanwhile.
 
 ```bash
 # macOS
@@ -176,10 +179,20 @@ walks down a fallback list (`gemini-2.5-flash` → `2.0-flash` → `1.5-flash`).
 
 ## Troubleshooting
 
-### `make doctor`
+### `make doctor` / the integrations doctor
 
-Run this first. It checks Python, the venv, node modules, `.env`, rembg,
-and whether the API is up.
+Run this first. It checks Python, the venv, node modules, `.env`, rembg, and
+whether the API is up — then runs the **integrations doctor**, which reports
+each live API (Gemini, rembg, Shopify, Firebase) and does a one-call live ping
+of Gemini and Shopify, telling you OK or the exact reason it isn't live.
+
+On Windows (no `make`), run it directly:
+
+```bash
+cd backend && python scripts/doctor.py
+```
+
+The same status is on `GET /api/health` under `integrations`.
 
 ---
 

@@ -44,6 +44,15 @@ def test_health_reports_mode_and_model():
     assert "mode" in body and "model" in body
 
 
+def test_health_reports_integrations():
+    body = client.get("/api/health").json()
+    integ = body["integrations"]
+    assert integ["gemini"] in ("live", "mock")
+    assert isinstance(integ["rembg"], bool)
+    assert integ["shopify"] in ("configured", "off")
+    assert integ["firebase"] in ("configured", "off")
+
+
 # --- image enhancement ----------------------------------------------------
 
 
@@ -60,6 +69,20 @@ def test_enhance_image_returns_before_and_after():
         raw = base64.b64decode(body[key])
         assert len(raw) > 100
         Image.open(io.BytesIO(raw)).verify()
+
+
+def test_enhance_image_removes_background_when_rembg_installed():
+    """When rembg is available, a real photo comes back with bg_removed=True and
+    a decodable studio image. Skipped where rembg isn't installed (CI/mock)."""
+    pytest.importorskip("rembg")
+    r = client.post(
+        "/api/enhance-image",
+        files={"file": ("basket.png", _png_bytes(), "image/png")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["bg_removed"] is True
+    Image.open(io.BytesIO(base64.b64decode(body["enhanced_b64"]))).verify()
 
 
 def test_enhance_image_rejects_non_image():
@@ -124,6 +147,29 @@ def test_generate_listing_handles_unknown_craft():
         "/api/generate-listing",
         json={"transcript": "some craft we have never seen before", "language": "en"},
     )
+    assert r.status_code == 200
+    assert r.json()["title"]["en"]
+
+
+def test_generate_listing_from_photo_only():
+    """The 'snap a photo, AI drafts it' path: an image + empty transcript must
+    still yield a well-formed, editable listing (mock returns a sensible default)."""
+    img_b64 = base64.b64encode(_png_bytes()).decode()
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": "", "language": "en", "image_b64": img_b64},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    assert {"en", "hi", "kn"} <= listing["title"].keys()
+    assert all(listing["title"][lang].strip() for lang in ("en", "hi", "kn"))
+    assert listing["material"]
+    assert isinstance(listing["tags"], list) and listing["tags"]
+
+
+def test_generate_listing_omitting_transcript_is_allowed():
+    """transcript is optional now (photo-only clients may omit it entirely)."""
+    r = client.post("/api/generate-listing", json={"language": "en"})
     assert r.status_code == 200
     assert r.json()["title"]["en"]
 

@@ -77,6 +77,9 @@ doctor: ## Diagnose a broken setup
 	@echo "env file: $$(test -f backend/.env && echo present || echo MISSING — run 'cp .env.example backend/.env')"
 	@echo "rembg:    $$($(VENV)/bin/python -c 'import rembg; print(\"installed\")' 2>/dev/null || echo 'not installed (fine — optional)')"
 	@echo "API:      $$(curl -s -m 2 http://localhost:8000/api/health || echo 'not running')"
+	@echo ""
+	@echo "🩺 Integrations (live pings):"
+	@$(VENV)/bin/python backend/scripts/doctor.py 2>/dev/null || echo "  (run 'make setup-backend' first)"
 
 # --- android --------------------------------------------------------------
 
