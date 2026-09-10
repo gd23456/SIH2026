@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     PUBLIC_BASE_URL: str = ""
     DATABASE_URL: str = "sqlite:///./karigar.db"
 
+    # Shopify Admin API (optional). When both are set, Shopify becomes a second
+    # REAL live channel; when absent it degrades to an honest demo channel.
+    SHOPIFY_STORE_DOMAIN: str = ""   # e.g. your-store.myshopify.com
+    SHOPIFY_ADMIN_TOKEN: str = ""    # shpat_...
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

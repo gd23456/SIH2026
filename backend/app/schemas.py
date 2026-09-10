@@ -131,6 +131,9 @@ class ChannelInfo(BaseModel):
     note: str = ""
     connected: bool = False
     mode: str = "demo"
+    # A "live" channel is only truly live when its backend credentials exist
+    # (ONDC always; Shopify only when SHOPIFY_* env vars are set).
+    configured: bool = True
 
 
 class ChannelResult(BaseModel):

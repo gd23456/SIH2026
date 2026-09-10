@@ -23,6 +23,13 @@ _CHANNELS: list[dict] = [
         "note": "Open Network for Digital Commerce — a real, schema-correct catalog + storefront.",
     },
     {
+        "id": "shopify",
+        "name": "Shopify",
+        "kind": "live",
+        "logo": "🛒",
+        "note": "Real storefront — product is published live via the Shopify Admin API.",
+    },
+    {
         "id": "meesho",
         "name": "Meesho",
         "kind": "demo",
