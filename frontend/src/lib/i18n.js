@@ -297,6 +297,17 @@ const STR = {
   skipDemo: { en: "Skip for now (demo)", hi: "अभी छोड़ें (डेमो)", kn: "ಈಗ ಬಿಟ್ಟುಬಿಡಿ (ಡೆಮೊ)" },
   signingIn: { en: "Signing in…", hi: "साइन इन हो रहा है…", kn: "ಸೈನ್ ಇನ್ ಆಗುತ್ತಿದೆ…" },
   authError: { en: "Sign-in failed — try again or skip", hi: "साइन इन विफल — फिर से या छोड़ें", kn: "ಸೈನ್ ಇನ್ ವಿಫಲ — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಬಿಟ್ಟುಬಿಡಿ" },
+  phoneWebOnly: {
+    en: "Phone OTP isn't available in the app yet — please use Google sign-in.",
+    hi: "ऐप में फ़ोन OTP अभी उपलब्ध नहीं है — कृपया Google से साइन इन करें।",
+    kn: "ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಫೋನ್ OTP ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ — ದಯವಿಟ್ಟು Google ಬಳಸಿ ಸೈನ್ ಇನ್ ಮಾಡಿ.",
+    ta: "ஆப்பில் தொலைபேசி OTP இன்னும் இல்லை — Google மூலம் உள்நுழையவும்.",
+    te: "యాప్‌లో ఫోన్ OTP ఇంకా అందుబాటులో లేదు — దయచేసి Google తో సైన్ ఇన్ చేయండి.",
+    bn: "অ্যাপে ফোন OTP এখনও নেই — অনুগ্রহ করে Google দিয়ে সাইন ইন করুন।",
+    mr: "अ‍ॅपमध्ये फोन OTP अद्याप उपलब्ध नाही — कृपया Google ने साइन इन करा.",
+    gu: "એપમાં ફોન OTP હજી ઉપલબ્ધ નથી — કૃપા કરીને Google થી સાઇન ઇન કરો.",
+    or: "ଆପ୍‌ରେ ଫୋନ୍ OTP ଏପର୍ଯ୍ୟନ୍ତ ନାହିଁ — ଦୟାକରି Google ରେ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ।",
+  },
   authDemoNotice: {
     en: "Demo mode — real Google / phone sign-in isn't configured on this build, so these buttons create a local demo account.",
     hi: "डेमो मोड — इस बिल्ड में असली Google / फ़ोन साइन-इन सेट नहीं है, इसलिए ये बटन एक लोकल डेमो खाता बनाते हैं।",

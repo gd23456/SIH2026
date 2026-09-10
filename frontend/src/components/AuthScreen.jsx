@@ -15,6 +15,10 @@ import {
 export default function AuthScreen({ lang, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // The provider's own error. "Sign-in failed" alone is useless to a user and
+  // to us — Google's codes are specific (10 = SHA-1/client mismatch,
+  // 12501 = cancelled, 7 = network) and worth showing.
+  const [errDetail, setErrDetail] = useState("");
   const [mode, setMode] = useState("choose"); // choose | phone | otp
   const [phone, setPhone] = useState("+91");
   const [code, setCode] = useState("");
@@ -28,12 +32,14 @@ export default function AuthScreen({ lang, onDone }) {
 
   async function google() {
     setErr("");
+    setErrDetail("");
     if (!configured) return finish(demoAccount());
     setBusy(true);
     try {
       finish(await signInWithGoogle());
-    } catch {
+    } catch (e) {
       setErr(t("authError", lang));
+      setErrDetail(String(e?.message || e?.code || e || "").slice(0, 160));
     } finally {
       setBusy(false);
     }
@@ -47,8 +53,15 @@ export default function AuthScreen({ lang, onDone }) {
       const c = await startPhoneSignIn(phone.trim(), "recaptcha-host");
       setConfirmer(() => c);
       setMode("otp");
-    } catch {
-      setErr(t("authError", lang));
+    } catch (e) {
+      // Distinguish "this platform can't do phone OTP" from "the code was
+      // wrong" — they need completely different things from the user.
+      setErr(
+        String(e?.message || "").includes("phone-otp-not-available-on-device")
+          ? t("phoneWebOnly", lang)
+          : t("authError", lang),
+      );
+      setMode("choose");
     } finally {
       setBusy(false);
     }
@@ -86,7 +99,14 @@ export default function AuthScreen({ lang, onDone }) {
       </div>
 
       <div className="space-y-3">
-        {err && <p className="text-center text-sm text-red-600">{err}</p>}
+        {err && (
+          <div className="text-center">
+            <p className="text-sm text-red-600">{err}</p>
+            {errDetail && (
+              <p className="mt-1 text-[11px] text-clay-400 font-mono break-all px-2">{errDetail}</p>
+            )}
+          </div>
+        )}
 
         {/*
           Without VITE_FIREBASE_* the Google and phone buttons quietly created a
