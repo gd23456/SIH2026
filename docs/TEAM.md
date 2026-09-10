@@ -3,21 +3,32 @@
 Six people. The split below is **by directory**, so two people almost never
 edit the same file. That is the entire point.
 
-> ⚠️ **TODO:** fill in the real names and GitHub handles, then update
-> [`.github/CODEOWNERS`](../.github/CODEOWNERS) to match.
+Lanes below reflect where people have actually been working, not a plan drawn
+up in advance. [`.github/CODEOWNERS`](../.github/CODEOWNERS) matches this table
+and auto-requests the right reviewers on every PR.
 
 ---
 
-## The six lanes
+## The lanes
 
 | # | Lane | Owner | GitHub | Owns these paths |
 |---|---|---|---|---|
 | 1 | **Lead / Backend** | Gourab | `@gd23456` | `backend/app/main.py`, `app/db/`, `config.py`, `schemas.py`, `.github/`, `Makefile` |
-| 2 | **AI Services** | _TBD_ | _TBD_ | `backend/app/services/`, `backend/app/data/` |
-| 3 | **Frontend** | _TBD_ | _TBD_ | `frontend/src/components/`, `App.jsx`, `index.css` |
-| 4 | **Mobile** | _TBD_ | _TBD_ | `frontend/android/`, `capacitor.config.json`, `frontend/public/` |
-| 5 | **i18n / Data / QA** | _TBD_ | _TBD_ | `frontend/src/lib/i18n.js`, `backend/app/mock_data.py`, `backend/tests/` |
-| 6 | **Pitch / Docs** | _TBD_ | _TBD_ | `docs/`, `README.md`, deck, video |
+| 2 | **Backend / AI Services** | Saatwik | `@skypank-coder` | `backend/app/services/`, `backend/app/data/`, `backend/tests/` |
+| 3 | **Frontend / Mobile** | Priyanshu | `@Priyanshu-senapati` | `frontend/src/components/`, `frontend/src/lib/`, `frontend/android/`, `capacitor.config.json` |
+| 4 | **i18n / Data / Docs** | Rachana | `@RachanaB5` | `frontend/src/lib/i18n.js`, `backend/app/data/`, `docs/`, `README.md` |
+
+> `disnithaa` has been invited but has **not accepted yet** — until they do,
+> they cannot push. Check github.com/gd23456/SIH2026/invitations.
+
+## Reviewing
+
+`main` requires **1 approval**, and every collaborator has write access, which
+is all GitHub needs to approve a PR. So any teammate can unblock any PR — you
+do not have to wait for the repo owner.
+
+**You cannot approve your own PR.** That is why CODEOWNERS lists the whole team
+on the default line: whoever opens a PR, the other three still get asked.
 
 **Three of us have Claude Code** — those should be lanes **1, 2, and 3**
 (backend, AI, frontend). Those lanes carry the most code volume, so the
