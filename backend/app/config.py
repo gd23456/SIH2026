@@ -8,7 +8,18 @@ _BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # Anchored to backend/ rather than the bare ".env", which pydantic resolves
+    # against the CURRENT WORKING DIRECTORY. `make backend` runs uvicorn from
+    # the repo root with --app-dir backend, so a relative ".env" looked for
+    # <repo root>/.env and silently found nothing — while every doc tells you to
+    # put your key in backend/.env. The result: a correctly configured key was
+    # ignored and /api/health still said "mock", with nothing explaining why.
+    # It only worked if you happened to launch uvicorn from inside backend/.
+    model_config = SettingsConfigDict(
+        env_file=str(_BACKEND_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-flash-latest"
