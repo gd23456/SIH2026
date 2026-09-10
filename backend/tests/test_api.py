@@ -615,12 +615,12 @@ def test_publish_always_includes_ondc_even_if_omitted():
 
 
 def test_publish_attaches_signed_in_artisan():
-    body = client.post("/api/publish", json={
+    client.post("/api/publish", json={
         "listing": LISTING_FIXTURE, "price": 749,
         "artisan_name": "Meera", "location": "Jaipur",
         "artisan_uid": "uid-publisher", "artisan_email": "meera@example.com",
         "channels": ["ondc"],
-    }).json()
+    })
     a = client.get("/api/artisan/uid-publisher").json()
     assert a["name"] == "Meera"
     assert a["listing_count"] >= 1

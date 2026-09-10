@@ -45,6 +45,8 @@ from .schemas import (
 )
 from .services import (
     channels as channels_service,
+)
+from .services import (
     gemini_service,
     gi_service,
     image_service,
@@ -167,7 +169,7 @@ def publish(
     catalog = ondc_service.build_ondc_catalog(listing, req.price, req.artisan_name, req.location)
     listing_id = catalog.pop("_listing_id")
 
-    row = repo.save_listing(
+    repo.save_listing(
         session,
         listing_id=listing_id,
         listing=listing,
