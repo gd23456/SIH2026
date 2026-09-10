@@ -316,6 +316,52 @@ const STR = {
     hi: "सामान्य कम मूल्य की तुलना में अनुमानित अतिरिक्त आय — हमारे उचित-मूल्य इंजन पर आधारित।",
     kn: "ಸಾಮಾನ್ಯ ಕಡಿಮೆ ಬೆಲೆಗೆ ಹೋಲಿಸಿದರೆ ಅಂದಾಜು ಹೆಚ್ಚುವರಿ ಆದಾಯ — ನಮ್ಮ ನ್ಯಾಯಯುತ-ಬೆಲೆ ಎಂಜಿನ್ ಆಧರಿಸಿ.",
   },
+  // --- voice diagnostics -------------------------------------------------
+  micKeepTalking: {
+    en: "Keep talking — pause as long as you like",
+    hi: "बोलते रहें — जितना चाहें रुकें",
+    kn: "ಮಾತನಾಡುತ್ತಿರಿ — ಎಷ್ಟು ಬೇಕಾದರೂ ವಿರಾಮ ತೆಗೆದುಕೊಳ್ಳಿ",
+  },
+  micStop: { en: "Tap to stop", hi: "रोकने के लिए दबाएँ", kn: "ನಿಲ್ಲಿಸಲು ಒತ್ತಿ" },
+  micDenied: {
+    en: "Microphone permission is off. Turn it on in Settings → Apps → Karigar AI → Permissions, or type below.",
+    hi: "माइक्रोफ़ोन की अनुमति बंद है। सेटिंग्स में चालू करें, या नीचे टाइप करें।",
+    kn: "ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ಆಫ್ ಆಗಿದೆ. ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಆನ್ ಮಾಡಿ, ಅಥವಾ ಕೆಳಗೆ ಟೈಪ್ ಮಾಡಿ.",
+  },
+  micLangMissing: {
+    en: "Voice isn't installed for this language on this phone. Install it in the Google app → Settings → Voice → Offline speech recognition — or just type below.",
+    hi: "इस फ़ोन में इस भाषा के लिए वॉइस इंस्टॉल नहीं है। Google ऐप → सेटिंग्स → वॉइस में इंस्टॉल करें, या नीचे टाइप करें।",
+    kn: "ಈ ಫೋನ್‌ನಲ್ಲಿ ಈ ಭಾಷೆಗೆ ಧ್ವನಿ ಸ್ಥಾಪಿಸಿಲ್ಲ. Google ಆ್ಯಪ್ → ಸೆಟ್ಟಿಂಗ್‌ಗಳು → ಧ್ವನಿಯಲ್ಲಿ ಸ್ಥಾಪಿಸಿ, ಅಥವಾ ಕೆಳಗೆ ಟೈಪ್ ಮಾಡಿ.",
+  },
+  micGeneric: {
+    en: "Couldn't hear that. Try again, or type below.",
+    hi: "सुनाई नहीं दिया। फिर कोशिश करें, या नीचे टाइप करें।",
+    kn: "ಕೇಳಿಸಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ, ಅಥವಾ ಕೆಳಗೆ ಟೈಪ್ ಮಾಡಿ.",
+  },
+  // --- navigation --------------------------------------------------------
+  home: { en: "Home", hi: "होम", kn: "ಮುಖಪುಟ" },
+  exitFlow: {
+    en: "Leave this listing?",
+    hi: "यह लिस्टिंग छोड़ें?",
+    kn: "ಈ ಪಟ್ಟಿಯನ್ನು ಬಿಡಬೇಕೆ?",
+  },
+  exitFlowSub: {
+    en: "Your progress on this product will be lost.",
+    hi: "इस उत्पाद की प्रगति खो जाएगी।",
+    kn: "ಈ ಉತ್ಪನ್ನದ ಪ್ರಗತಿ ಕಳೆದುಹೋಗುತ್ತದೆ.",
+  },
+  stay: { en: "Keep going", hi: "जारी रखें", kn: "ಮುಂದುವರಿಸಿ" },
+  leave: { en: "Leave", hi: "छोड़ें", kn: "ಬಿಡಿ" },
+  demoNotLive: {
+    en: "Demo item — not on the live network",
+    hi: "डेमो आइटम — लाइव नेटवर्क पर नहीं",
+    kn: "ಡೆಮೊ ವಸ್ತು — ಲೈವ್ ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿಲ್ಲ",
+  },
+  demoNotLiveSub: {
+    en: "The backend isn't reachable, so this is canned data. Connect to the backend (⚙︎ Connection) to publish and open real listings.",
+    hi: "बैकएंड उपलब्ध नहीं है, इसलिए यह डेमो डेटा है। असली लिस्टिंग के लिए ⚙︎ Connection से जुड़ें।",
+    kn: "ಬ್ಯಾಕೆಂಡ್ ತಲುಪುತ್ತಿಲ್ಲ, ಆದ್ದರಿಂದ ಇದು ಡೆಮೊ ಡೇಟಾ. ನಿಜವಾದ ಪಟ್ಟಿಗಳಿಗೆ ⚙︎ Connection ಬಳಸಿ.",
+  },
 };
 
 export function t(key, lang = "en") {

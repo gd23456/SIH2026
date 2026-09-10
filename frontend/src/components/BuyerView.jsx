@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
 import { searchListings, getLastSource } from "../lib/api";
-import { Spinner } from "./ui";
+import { Spinner, ConfirmSheet } from "./ui";
 import ProductImage from "./ProductImage";
 
 // The buyer half of the story: an artisan publishes, then anyone on the ONDC
@@ -9,9 +9,13 @@ import ProductImage from "./ProductImage";
 // separate "buyer app" (blue ONDC chrome) so the seller flow and the buyer
 // flow read as two sides of one network on a single device.
 
-function BuyerCard({ row, lang }) {
+function BuyerCard({ row, lang, onDemoTap }) {
   const title = row.title?.[lang] || row.title?.en || "";
-  const disabled = row._demo;
+  // A demo row has no storefront on any server, so its link would 404. It used
+  // to render as a dead card with a "Buy now →" label, which reads as a broken
+  // app rather than as offline data. Now it says what it is and explains itself
+  // on tap.
+  const disabled = row._demo || !row.storefront_url;
 
   const card = (
     <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden active:scale-[0.98] transition shadow-sm">
@@ -31,12 +35,22 @@ function BuyerCard({ row, lang }) {
             {row.gi_state && <span className="font-normal opacity-80">· {row.gi_state}</span>}
           </span>
         )}
-        <p className="mt-2 text-[11px] font-semibold text-sky-600">{t("buyNow", lang)} →</p>
+        {disabled ? (
+          <p className="mt-2 text-[11px] font-semibold text-slate-400">{t("demoNotLive", lang)}</p>
+        ) : (
+          <p className="mt-2 text-[11px] font-semibold text-sky-600">{t("buyNow", lang)} →</p>
+        )}
       </div>
     </div>
   );
 
-  if (disabled) return card;
+  if (disabled) {
+    return (
+      <button type="button" onClick={onDemoTap} className="block w-full text-left">
+        {card}
+      </button>
+    );
+  }
   return (
     <a href={row.storefront_url} target="_blank" rel="noreferrer" className="block">
       {card}
@@ -48,6 +62,7 @@ export default function BuyerView({ lang, onBack }) {
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState(null);
   const [source, setSource] = useState(null);
+  const [explainDemo, setExplainDemo] = useState(false);
 
   // Debounced live search so results appear as the buyer types.
   useEffect(() => {
@@ -108,11 +123,27 @@ export default function BuyerView({ lang, onBack }) {
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {rows.map((row) => (
-              <BuyerCard key={row.listing_id} row={row} lang={lang} />
+              <BuyerCard
+                key={row.listing_id}
+                row={row}
+                lang={lang}
+                onDemoTap={() => setExplainDemo(true)}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {explainDemo && (
+        <ConfirmSheet
+          title={t("demoNotLive", lang)}
+          body={t("demoNotLiveSub", lang)}
+          cancelLabel={t("back", lang)}
+          confirmLabel="OK"
+          onCancel={() => setExplainDemo(false)}
+          onConfirm={() => setExplainDemo(false)}
+        />
+      )}
     </div>
   );
 }
