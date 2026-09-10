@@ -80,6 +80,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # So the browser can read whether Gemini or the mock produced the response.
+    expose_headers=["X-Karigar-Mode"],
 )
 
 
@@ -140,7 +142,7 @@ async def enhance_image(file: UploadFile = File(...)):
 
 
 @app.post("/api/generate-listing")
-def generate_listing(req: GenerateListingRequest):
+def generate_listing(req: GenerateListingRequest, response: Response):
     listing = gemini_service.generate_listing(req.transcript, req.language, req.image_b64)
     # Verify against the real GI registry — a registry match is stronger than
     # the LLM's gi_candidate guess and earns the green "Verified GI" badge.
@@ -148,12 +150,16 @@ def generate_listing(req: GenerateListingRequest):
     listing["gi_verified"] = gi["matched"]
     listing["gi_registry_name"] = gi["name"] or None
     listing["gi_state"] = gi["state"] or None
+    # Tell the client whether real Gemini answered, so the "● AI" badge is honest.
+    response.headers["X-Karigar-Mode"] = gemini_service.last_source()
     return listing
 
 
 @app.post("/api/price", response_model=PriceResponse)
-def price(req: PriceRequest):
-    return pricing_service.fair_price(req.model_dump())
+def price(req: PriceRequest, response: Response):
+    result = pricing_service.fair_price(req.model_dump())
+    response.headers["X-Karigar-Mode"] = gemini_service.last_source()
+    return result
 
 
 @app.post("/api/publish", response_model=PublishResponse)

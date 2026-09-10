@@ -140,6 +140,18 @@ def test_generate_listing_carries_the_chosen_language(language):
     assert listing["title"][language] != listing["title"]["en"]
 
 
+def test_generate_listing_sets_source_header():
+    """The client reads X-Karigar-Mode to show an honest AI/demo badge.
+    In mock mode (tests) it must be 'mock', never 'live'."""
+    r = client.post("/api/generate-listing", json={"transcript": "bamboo basket", "language": "en"})
+    assert r.headers.get("X-Karigar-Mode") == "mock"
+
+
+def test_price_sets_source_header():
+    r = client.post("/api/price", json={"title": "Bamboo Basket", "material": "Bamboo", "production_time": "3 days"})
+    assert r.headers.get("X-Karigar-Mode") == "mock"
+
+
 def test_generate_listing_handles_unknown_craft():
     """An unmatched transcript must still produce a well-formed listing."""
     r = client.post(
@@ -450,6 +462,16 @@ def test_published_listing_survives_and_renders():
     for scheme in ("http://", "https://"):
         assert f'src="{scheme}' not in page
         assert f'href="{scheme}' not in page
+
+
+def test_storefront_has_language_switcher_not_stacked_descriptions():
+    """The storefront must offer a language switcher, not three stacked copies."""
+    body = _publish()
+    page = client.get(f"/p/{body['listing_id']}").text
+    assert 'id="langtabs"' in page
+    assert 'data-lang="hi"' in page and 'data-lang="kn"' in page
+    # non-English title/description blocks start hidden (one shown at a time)
+    assert "hidden" in page
 
 
 def test_storefront_page_embeds_its_own_qr():

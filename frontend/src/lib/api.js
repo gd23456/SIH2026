@@ -78,30 +78,65 @@ export function forcedDemo() {
 let _lastSource = "live";
 export const getLastSource = () => _lastSource;
 
+// The backend sets X-Karigar-Mode: live|mock so we can tell whether real Gemini
+// answered even when the backend itself is reachable. jfetch captures it here.
+let _lastBackendMode = null;
+
 async function jfetch(path, opts = {}, timeoutMs = 12000) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), timeoutMs);
+  _lastBackendMode = null;
   try {
     const res = await fetch(apiBase() + path, { ...opts, signal: ctrl.signal });
     if (!res.ok) throw new Error("HTTP " + res.status);
+    _lastBackendMode = res.headers.get("X-Karigar-Mode"); // "live" | "mock" | null
     return await res.json();
   } finally {
     clearTimeout(to);
   }
 }
 
+/**
+ * Downscale a big phone photo (in the browser) before upload, so enhance is
+ * fast even on a hotspot. Reads the source ONCE via createImageBitmap and hands
+ * back an in-memory JPEG File that is safe to re-read (upload + b64 fallback).
+ * Any failure returns the original File — never blocks the upload.
+ */
+async function downscaleForUpload(file, maxDim = 1600, quality = 0.85) {
+  try {
+    if (!file?.type?.startsWith("image/") || typeof createImageBitmap !== "function") return file;
+    const bitmap = await createImageBitmap(file);
+    const { width, height } = bitmap;
+    const longest = Math.max(width, height);
+    if (longest <= maxDim) {
+      bitmap.close?.();
+      return file;
+    }
+    const scale = maxDim / longest;
+    const w = Math.round(width * scale);
+    const h = Math.round(height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
+    if (!blob) return file;
+    return new File([blob], (file.name || "photo") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file; // never block the upload on a downscale hiccup
+  }
+}
+
 /** Send an image File; get {original_b64, enhanced_b64, bg_removed}. */
 export async function enhanceImage(file) {
-  // Read the file ONCE, before anything else touches it.
-  //
-  // On Android the photo picker hands us a one-shot content:// URI. Uploading
-  // it consumes the handle, so a fallback that re-reads the same File throws
-  // `ProgressEvent` from FileReader. That took down the demo path on device:
-  // the upload timed out, the fallback threw, the rejection went unhandled,
-  // and the photo step silently reset to empty with no error shown at all.
+  // Downscale first (this reads the one-shot Android content:// URI exactly
+  // once); the result is an in-memory File that both the upload and the b64
+  // fallback below can safely read without re-consuming the original handle.
+  const upload = await downscaleForUpload(file);
   let b64 = null;
   try {
-    b64 = await fileToB64(file);
+    b64 = await fileToB64(upload);
   } catch {
     b64 = null;
   }
@@ -112,7 +147,7 @@ export async function enhanceImage(file) {
   }
   try {
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", upload);
     const data = await jfetch("/api/enhance-image", { method: "POST", body: fd }, 25000);
     _lastSource = "live";
     return data;
@@ -140,7 +175,8 @@ export async function generateListing({ transcript, language, image_b64 }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript, language, image_b64 }),
     });
-    _lastSource = "live";
+    // Honest badge: "AI" only when real Gemini answered, else the mock ran.
+    _lastSource = _lastBackendMode === "mock" ? "demo" : "live";
     return data;
   } catch {
     _lastSource = "demo";
@@ -166,7 +202,7 @@ export async function getPrice(listing) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    _lastSource = "live";
+    _lastSource = _lastBackendMode === "mock" ? "demo" : "live";
     return data;
   } catch {
     _lastSource = "demo";

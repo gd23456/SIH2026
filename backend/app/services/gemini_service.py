@@ -38,6 +38,14 @@ _FALLBACK_MODELS = [
 # Remembers the model that actually worked, so we pay the discovery cost once.
 _resolved_model: str | None = None
 
+# "live" if real Gemini output produced the last result, "mock" if we fell back.
+# Lets the API tell the frontend whether to show the "● AI" or "demo" badge.
+_last_source: str = "mock"
+
+
+def last_source() -> str:
+    return _last_source
+
 
 def _candidates() -> list[str]:
     """Configured model first, then the known-good fallbacks, de-duplicated."""
@@ -208,16 +216,20 @@ def generate_listing(transcript: str = "", language: str = "en", image_b64: str 
         except Exception as e:
             log.warning("Could not decode image_b64, continuing text-only: %s", e)
 
+    global _last_source
     text = _generate(parts)
     if text is None:
+        _last_source = "mock"
         return mock_data.mock_listing(transcript, language)
     try:
         data = _extract_json(text)
         # keep the internal base-price hint out of the public API contract
         data.pop("_base_price", None)
+        _last_source = "live"
         return data
     except Exception as e:
         log.warning("generate_listing could not parse model JSON, using mock: %s", e)
+        _last_source = "mock"
         return mock_data.mock_listing(transcript, language)
 
 
@@ -229,11 +241,16 @@ def estimate_price(payload: dict) -> dict:
         craft_technique=payload.get("craft_technique", ""),
         production_time=payload.get("production_time", "2 days"),
     )
+    global _last_source
     text = _generate([prompt])
     if text is None:
+        _last_source = "mock"
         return mock_data.mock_price(payload)
     try:
-        return _extract_json(text)
+        data = _extract_json(text)
+        _last_source = "live"
+        return data
     except Exception as e:
         log.warning("estimate_price could not parse model JSON, using mock: %s", e)
+        _last_source = "mock"
         return mock_data.mock_price(payload)
