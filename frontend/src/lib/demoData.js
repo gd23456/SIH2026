@@ -137,13 +137,45 @@ export function demoPrice(listing = {}) {
   };
 }
 
-export function demoPublish(listing = {}, price = 749) {
+// The channel registry, mirrored from backend/app/services/channels.py so the
+// offline demo shows the same "publish everywhere" story. ONDC is the one real
+// channel; the rest are honestly-labelled demo adapters.
+export function demoChannels() {
+  return [
+    { id: "ondc", name: "ONDC", kind: "live", logo: "🟢", note: "Open Network for Digital Commerce — a real, schema-correct catalog + storefront.", connected: true, mode: "live" },
+    { id: "meesho", name: "Meesho", kind: "demo", logo: "🛍️", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
+    { id: "myntra", name: "Myntra", kind: "demo", logo: "👗", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
+    { id: "amazon_karigar", name: "Amazon Karigar", kind: "demo", logo: "📦", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
+    { id: "flipkart_samarth", name: "Flipkart Samarth", kind: "demo", logo: "🛒", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
+    { id: "whatsapp", name: "WhatsApp Business", kind: "demo", logo: "💬", note: "Simulated for the prototype — WhatsApp Business catalog API is on the roadmap.", connected: false, mode: "demo" },
+  ];
+}
+
+const _CH_NAMES = Object.fromEntries(demoChannels().map((c) => [c.id, c]));
+
+function demoChannelResults(id, storefront, channels) {
+  const selected = Array.from(new Set(["ondc", ...(channels || [])]));
+  return selected
+    .map((cid) => {
+      const ch = _CH_NAMES[cid];
+      if (!ch) return null;
+      if (ch.kind === "live") {
+        return { channel_id: cid, name: ch.name, kind: "live", mode: "live", status: "Live on ONDC", ref: id, storefront_url: storefront, qr_url: null };
+      }
+      const ref = cid.split("_")[0].slice(0, 3).toUpperCase() + "-" + Math.random().toString(36).slice(2, 10).toUpperCase();
+      return { channel_id: cid, name: ch.name, kind: "demo", mode: "demo", status: `Published to ${ch.name} (demo)`, ref, storefront_url: null, qr_url: null };
+    })
+    .filter(Boolean);
+}
+
+export function demoPublish(listing = {}, price = 749, channels = ["ondc"]) {
   const id = "KARIGAR-" + Math.random().toString(36).slice(2, 10).toUpperCase();
   const storefront = `https://karigar.ai/p/${id}`;
   const title = listing?.title?.en || "Handcrafted Product";
   return {
     listing_id: id,
     status: "PUBLISHED",
+    channel_results: demoChannelResults(id, storefront, channels),
     // No backend reachable, so nothing was actually persisted and there is no
     // page for a QR code to point at. PublishStep reads this flag and shows
     // the share link without a dead QR.

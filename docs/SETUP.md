@@ -74,6 +74,38 @@ there's no wifi, the app still demos. **Demo mode is our stage insurance.**
 
 ---
 
+## Accounts & sign-in (Firebase — optional)
+
+The seller flow is gated by a login screen (Google or phone-OTP). **It is
+optional for the demo:** with no Firebase config the app runs a local
+**demo-account** mode, and **"Skip for now (demo)"** always works — a
+login/Firebase misconfig can never block the stage demo.
+
+To enable *real* sign-in, copy `frontend/.env.example` → `frontend/.env` and fill:
+
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project
+VITE_FIREBASE_APP_ID=1:...:web:...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+```
+
+1. Create a project at <https://console.firebase.google.com>.
+2. **Authentication → Sign-in method:** enable **Google** and **Phone**.
+3. **Authentication → Settings → Authorized domains:** add every origin the app
+   is served from — `localhost`, your laptop's LAN IP, and the Capacitor WebView
+   origin **`localhost`** (Android renders at `https://localhost`). Google popup
+   and phone-OTP reCAPTCHA are rejected from unlisted domains.
+4. On Android we use the Firebase **Web** SDK inside the WebView (Google popup +
+   phone OTP via reCAPTCHA) — **no** `google-services.json` / native plugin is
+   required, so the build is never blocked on native Firebase wiring.
+
+Values are read as `import.meta.env.VITE_FIREBASE_*`; `frontend/.env` is
+gitignored — never commit real keys.
+
+---
+
 ## Seed demo data (so the shelf is never empty on stage)
 
 "My Products" and the Buyer view read from the database. On a fresh clone they
