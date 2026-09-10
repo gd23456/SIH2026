@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Adaptive-icon background: the Karigar clay-600 brand tile, so the
+         launcher icon matches the mark on the Welcome screen. -->
+    <color name="ic_launcher_background">#a4652f</color>
 </resources>

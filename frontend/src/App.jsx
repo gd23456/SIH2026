@@ -12,7 +12,8 @@ import Profile from "./components/Profile";
 import Plans from "./components/Plans";
 import Privacy from "./components/Privacy";
 import ConnectSheet from "./components/ConnectSheet";
-import { Header, Stepper } from "./components/ui";
+import { Header, Stepper, ConfirmSheet } from "./components/ui";
+import { t } from "./lib/i18n";
 import { loadStoredAccount } from "./lib/auth";
 import { upsertArtisan } from "./lib/api";
 
@@ -27,6 +28,7 @@ export default function App() {
   const [view, setView] = useState("flow"); // flow | products | buyer | auth | profile | plans | privacy
   const [showConnect, setShowConnect] = useState(false);
   const [account, setAccount] = useState(() => loadStoredAccount());
+  const [confirmExit, setConfirmExit] = useState(false);
 
   function reset() {
     setStep(1);
@@ -61,8 +63,31 @@ export default function App() {
     setView("flow");
   }
 
-  const canBack = step > 1 && step < 5;
-  const back = () => setStep((s) => Math.max(1, s - 1));
+  // Step 1 goes back to Welcome rather than nowhere; step 5 is a finished
+  // listing, so its "back" is the home button instead.
+  const canBack = step >= 1 && step < 5;
+  const back = () => (step === 1 ? goHome() : setStep((s) => Math.max(1, s - 1)));
+
+  /** Leave the 5-step flow. Confirms first if there is unsaved work. */
+  function goHome() {
+    // Nothing entered yet, or already published — no need to ask.
+    if (step === 5 || (!imageB64 && !listing)) {
+      setStep(0);
+      setView("flow");
+      return;
+    }
+    setConfirmExit(true);
+  }
+
+  function discardAndGoHome() {
+    setConfirmExit(false);
+    setStep(0);
+    setImageB64(null);
+    setTranscript("");
+    setListing(null);
+    setPrice(0);
+    setView("flow");
+  }
 
   return (
     // Phone frame: fills screen on mobile, centered card on desktop
@@ -74,6 +99,7 @@ export default function App() {
               step={step}
               lang={lang}
               onBack={canBack ? back : null}
+              onHome={goHome}
               sourceBadge={source}
               account={account}
               onProfile={() => setView("profile")}
@@ -183,6 +209,17 @@ export default function App() {
         </div>
 
         {showConnect && <ConnectSheet lang={lang} onClose={() => setShowConnect(false)} />}
+
+        {confirmExit && (
+          <ConfirmSheet
+            title={t("exitFlow", lang)}
+            body={t("exitFlowSub", lang)}
+            cancelLabel={t("stay", lang)}
+            confirmLabel={t("leave", lang)}
+            onCancel={() => setConfirmExit(false)}
+            onConfirm={discardAndGoHome}
+          />
+        )}
       </div>
     </div>
   );
