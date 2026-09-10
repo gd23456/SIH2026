@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import io
 import logging
+import threading
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageStat
 
@@ -90,6 +91,27 @@ def _fit_onto_studio(cutout: Image.Image) -> Image.Image:
     return canvas.convert("RGB")
 
 
+# rembg's remove() defaults to the bria-rmbg model (~1GB, non-commercial licence)
+# and builds a fresh session on every call, reloading the weights each request
+# (~30s per photo). u2net is ~180MB, Apache-2.0, and ~0.5s once loaded.
+_REMBG_MODEL = "u2net"
+_session = None
+_session_lock = threading.Lock()
+
+
+def _rembg_session():
+    """Build the rembg session once and reuse it across requests."""
+    global _session
+    if _session is None:
+        with _session_lock:
+            if _session is None:
+                from rembg import new_session  # heavy import; optional
+
+                _session = new_session(_REMBG_MODEL)
+                log.info("rembg session ready (%s)", _REMBG_MODEL)
+    return _session
+
+
 def enhance_image(raw: bytes) -> dict:
     """Return {original_b64, enhanced_b64, bg_removed: bool}."""
     src = Image.open(io.BytesIO(raw))
@@ -108,7 +130,7 @@ def enhance_image(raw: bytes) -> dict:
     try:
         from rembg import remove  # heavy import; optional
 
-        out = remove(src)  # RGBA
+        out = remove(src, session=_rembg_session())  # RGBA
         cutout = out if isinstance(out, Image.Image) else Image.open(io.BytesIO(out))
         cutout = cutout.convert("RGBA")
         bg_removed = True
