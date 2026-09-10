@@ -41,7 +41,7 @@ function ChannelRow({ ch, lang, onConnect, busy }) {
   );
 }
 
-export default function Profile({ lang, account, setAccount, onBack, onMyProducts, onPlans, onPrivacy, onSignedOut }) {
+export default function Profile({ lang, account, setAccount, onBack, onMyProducts, onPlans, onPrivacy, onSignedOut, onConnect }) {
   const [server, setServer] = useState(null);
   const [channels, setChannels] = useState(null);
   const [impact, setImpact] = useState(null);
@@ -197,9 +197,19 @@ export default function Profile({ lang, account, setAccount, onBack, onMyProduct
         )}
       </div>
 
-      <button onClick={onPrivacy} className="text-center text-xs text-clay-500 py-3 font-medium mt-2">
-        {t("privacy", lang)}
-      </button>
+      {/* Connection lives here now rather than on the home screen: it is
+          demo/setup, not something an artisan needs to see every launch. The
+          bottom nav makes Profile one tap from anywhere, so it is actually MORE
+          reachable than before — which matters, because on a fresh install this
+          is the only way to point the app at a backend. */}
+      <div className="grid grid-cols-2 gap-3 mt-2">
+        <button onClick={onPrivacy} className="text-center text-xs text-clay-500 py-3 font-medium">
+          {t("privacy", lang)}
+        </button>
+        <button onClick={onConnect} className="text-center text-xs text-clay-500 py-3 font-medium">
+          ⚙︎ {t("connection", lang)}
+        </button>
+      </div>
       <button onClick={doSignOut} className="btn-ghost !text-red-600">
         {t("signOut", lang)}
       </button>

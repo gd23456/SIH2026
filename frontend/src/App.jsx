@@ -12,7 +12,7 @@ import Profile from "./components/Profile";
 import Plans from "./components/Plans";
 import Privacy from "./components/Privacy";
 import ConnectSheet from "./components/ConnectSheet";
-import { Header, Stepper, ConfirmSheet } from "./components/ui";
+import { Header, Stepper, ConfirmSheet, BottomNav, LanguageSheet } from "./components/ui";
 import { t } from "./lib/i18n";
 import { loadStoredAccount } from "./lib/auth";
 import { upsertArtisan } from "./lib/api";
@@ -27,6 +27,7 @@ export default function App() {
   const [source, setSource] = useState(null); // 'live' | 'demo'
   const [view, setView] = useState("flow"); // flow | products | buyer | auth | profile | plans | privacy
   const [showConnect, setShowConnect] = useState(false);
+  const [showLang, setShowLang] = useState(false);
   const [account, setAccount] = useState(() => loadStoredAccount());
   const [confirmExit, setConfirmExit] = useState(false);
 
@@ -74,6 +75,20 @@ export default function App() {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [step, view]);
 
+  // Bottom nav. Kept visible during the flow too: progress lives in this
+  // component's state, so switching tab away mid-listing and coming back
+  // resumes on the same step with the listing intact — only reset() clears it.
+  // Hidden on the sign-in screen, which is meant to be a decision point.
+  const NAV_VIEW = { flow: "sell", products: "products", buyer: "buyer", profile: "profile" };
+  const showNav = view !== "auth";
+  const navTab = NAV_VIEW[view] || (view === "plans" || view === "privacy" ? "profile" : "sell");
+
+  function navigate(id) {
+    // Deliberately setView, NOT startSelling(): that would re-run the auth gate
+    // on every tap, and reset() would silently destroy an in-progress listing.
+    return setView(id === "sell" ? "flow" : id);
+  }
+
   const canBack = step >= 1 && step < 5;
   const back = () => (step === 1 ? goHome() : setStep((s) => Math.max(1, s - 1)));
 
@@ -111,7 +126,11 @@ export default function App() {
   // the plugin's async addListener and can drop or double-fire presses.
   const backHandler = useRef(() => {});
   backHandler.current = () => {
+    // Overlays first. Without this, back with the language sheet open falls
+    // through to the step-0 branch and exits the app outright.
+    if (showLang) return setShowLang(false);
     if (showConnect) return setShowConnect(false);
+    if (confirmExit) return setConfirmExit(false);
     if (view === "plans" || view === "privacy") return setView("profile");
     if (view !== "flow") return setView("flow"); // products / buyer / profile / auth
     if (step > 1 && step < 5) return back();
@@ -173,6 +192,11 @@ export default function App() {
               onMyProducts={() => setView("products")}
               onPlans={() => setView("plans")}
               onPrivacy={() => setView("privacy")}
+              // Connection moved off home: it is demo/setup, not something an
+              // artisan needs. Profile is one tap away via the bottom nav, so
+              // it is now MORE reachable than before — which matters, because
+              // on a fresh install this is the only way to reach the backend.
+              onConnect={() => setShowConnect(true)}
               onSignedOut={() => {
                 setAccount(null);
                 setStep(0);
@@ -200,13 +224,11 @@ export default function App() {
           {view === "flow" && step === 0 && (
             <Welcome
               lang={lang}
-              setLang={setLang}
               account={account}
               onStart={startSelling}
               onMyProducts={() => setView("products")}
-              onBuyerView={() => setView("buyer")}
               onProfile={() => setView("profile")}
-              onConnect={() => setShowConnect(true)}
+              onOpenLang={() => setShowLang(true)}
             />
           )}
           {view === "flow" && step === 1 && (
@@ -260,7 +282,12 @@ export default function App() {
           )}
         </div>
 
+        {showNav && <BottomNav active={navTab} lang={lang} onNavigate={navigate} />}
+
         {showConnect && <ConnectSheet lang={lang} onClose={() => setShowConnect(false)} />}
+        {showLang && (
+          <LanguageSheet lang={lang} setLang={setLang} onClose={() => setShowLang(false)} />
+        )}
 
         {confirmExit && (
           <ConfirmSheet
