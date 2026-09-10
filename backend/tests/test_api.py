@@ -697,3 +697,43 @@ def test_listing_image_404s_without_a_photo():
     body = _publish()  # fixture carries no image
     assert client.get(f"/api/listings/{body['listing_id']}/image").status_code == 404
     assert client.get("/api/listings/KARIGAR-NOPE/image").status_code == 404
+
+
+# --- impact dashboard (Phase 3) --------------------------------------------
+
+
+def test_storefront_view_increments_the_counter():
+    body = _publish(price=1000, artisan_name="Uma", location="Pune",
+                    artisan_uid="uid-impact-1")
+    before = client.get("/api/impact/uid-impact-1").json()["total_views"]
+    client.get(f"/p/{body['listing_id']}")
+    client.get(f"/p/{body['listing_id']}")
+    after = client.get("/api/impact/uid-impact-1").json()["total_views"]
+    assert after == before + 2
+
+
+def test_impact_sums_uplift_and_reach():
+    uid = "uid-impact-2"
+    client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": 1000, "artisan_uid": uid,
+        "artisan_name": "Nadia", "location": "Kutch", "channels": ["ondc", "meesho"],
+    })
+    client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": 2000, "artisan_uid": uid,
+        "artisan_name": "Nadia", "location": "Kutch", "channels": ["ondc"],
+    })
+    imp = client.get(f"/api/impact/{uid}").json()
+    assert imp["products"] == 2
+    # 30% conservative uplift on 1000 + 2000 = 300 + 600
+    assert imp["fair_value_uplift"] == 900
+    assert imp["channels_reached"] == 2      # ondc + meesho across the two
+    assert imp["baseline_method"]            # documented + defensible
+
+
+def test_impact_unknown_artisan_is_zeroed_not_error():
+    imp = client.get("/api/impact/nobody-here").json()
+    assert imp == {
+        "products": 0, "channels_reached": 0, "total_views": 0,
+        "total_scans": 0, "fair_value_uplift": 0, "currency": "INR",
+        "baseline_method": imp["baseline_method"],
+    }

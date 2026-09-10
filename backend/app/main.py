@@ -37,6 +37,7 @@ from .schemas import (
     ChannelInfo,
     ChannelResult,
     GenerateListingRequest,
+    ImpactOut,
     ListingSummary,
     PriceRequest,
     PriceResponse,
@@ -255,6 +256,22 @@ def get_artisan_by_uid(uid: str, session: Session = Depends(get_session)):
     return _artisan_out(session, artisan)
 
 
+_BASELINE_METHOD = (
+    "Estimated additional income vs typical underpricing — each product's fair "
+    "price minus a conservative baseline of 70% of it (a modest 30% underpricing "
+    "gap), summed across the artisan's listings. Based on our fair-price engine; "
+    "not audited sales data."
+)
+
+
+@app.get("/api/impact/{uid}", response_model=ImpactOut)
+def impact(uid: str, session: Session = Depends(get_session)):
+    """What the artisan actually gets: reach + estimated fair-value uplift."""
+    artisan = repo.get_artisan_by_uid(session, uid)
+    data = repo.impact(session, artisan.id if artisan else None)
+    return ImpactOut(**data, baseline_method=_BASELINE_METHOD)
+
+
 @app.get("/api/channels", response_model=list[ChannelInfo])
 def list_channels(uid: str = "", session: Session = Depends(get_session)):
     """The channel registry, annotated with this artisan's connection status.
@@ -393,6 +410,8 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
     if listing is None:
         return HTMLResponse(_NOT_FOUND_PAGE, status_code=404)
 
+    repo.bump_counter(session, listing_id, "views")  # impact: storefront opened
+
     return templates.TemplateResponse(
         request=request,
         name="product.html",
@@ -413,6 +432,9 @@ def qr_png(listing_id: str, request: Request, session: Session = Depends(get_ses
     if repo.get_listing(session, listing_id) is None:
         raise HTTPException(404, "Listing not found")
 
+    # NOTE: we deliberately do NOT count QR fetches as "scans" — the storefront
+    # page embeds this image, so it would just mirror page views. A real scan
+    # opens /p/{id}, which is already counted as a view (the honest reach metric).
     img = qrcode.make(f"{_base_url(request)}/p/{listing_id}")
     buf = io.BytesIO()
     img.save(buf, format="PNG")

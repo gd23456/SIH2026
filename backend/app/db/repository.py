@@ -208,3 +208,52 @@ def listing_count(session: Session, artisan_id: int | None) -> int:
     if artisan_id is None:
         return 0
     return len(session.exec(select(Listing.id).where(Listing.artisan_id == artisan_id)).all())
+
+
+# --- impact (Phase 3) ------------------------------------------------------
+
+# Conservative baseline: artisans commonly sell well below a market-grounded
+# fair price. We assume they'd have charged ~70% of the fair price (a 30%
+# underpricing gap) — deliberately modest so the uplift claim is defensible.
+NAIVE_UNDERPRICE_FACTOR = 0.70
+
+
+def bump_counter(session: Session, listing_id: str, field: str) -> None:
+    """Increment a listing's 'views' or 'scans' counter. Silent if unknown."""
+    if field not in ("views", "scans"):
+        return
+    row = session.get(Listing, listing_id)
+    if row is None:
+        return
+    setattr(row, field, (getattr(row, field) or 0) + 1)
+    session.add(row)
+    session.commit()
+
+
+def impact(session: Session, artisan_id: int | None) -> dict:
+    """Aggregate impact numbers for an artisan across their listings."""
+    if artisan_id is None:
+        return {"products": 0, "channels_reached": 0, "total_views": 0,
+                "total_scans": 0, "fair_value_uplift": 0}
+
+    rows = list(session.exec(select(Listing).where(Listing.artisan_id == artisan_id)).all())
+    listing_ids = [r.id for r in rows]
+
+    total_views = sum(r.views or 0 for r in rows)
+    total_scans = sum(r.scans or 0 for r in rows)
+    uplift = sum(round((r.price or 0) * (1 - NAIVE_UNDERPRICE_FACTOR)) for r in rows)
+
+    channels: set[str] = set()
+    if listing_ids:
+        pubs = session.exec(
+            select(ChannelPublish.channel_id).where(ChannelPublish.listing_id.in_(listing_ids))
+        ).all()
+        channels = set(pubs)
+
+    return {
+        "products": len(rows),
+        "channels_reached": len(channels),
+        "total_views": total_views,
+        "total_scans": total_scans,
+        "fair_value_uplift": uplift,
+    }

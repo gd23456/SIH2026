@@ -50,6 +50,7 @@ language. Karigar AI does the rest.
 | 🚀 | **Publish everywhere** | **Publish once, reach every channel.** Real **ONDC RET10** catalog + QR storefront; other channels are clearly-labelled demo adapters |
 | 🛒 | **Buyer view** | The other side of the network: search the published catalogue and find the item the artisan just created |
 | 👤 | **Account** | Google or phone-OTP sign-in (Firebase), a profile with connected channels + plan, and a "Skip for now (demo)" path that never blocks the demo |
+| 🌱 | **Impact** | A dashboard showing the artisan's reach — products live, channels, storefront views — and estimated **fair-value uplift** (₹ earned vs typical underpricing), so "what does the artisan get?" has a concrete answer |
 
 **Result:** an artisan who has never typed a word of English is sellable
 nationwide, in about ninety seconds.

@@ -95,6 +95,9 @@ class Listing(SQLModel, table=True):
 
     price: int = 0
     image_b64: str = ""
+    # Impact counters: storefront opens and QR scans (see /api/impact).
+    views: int = 0
+    scans: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @property

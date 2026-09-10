@@ -236,6 +236,20 @@ export function demoListings() {
   ];
 }
 
+// Offline demo impact numbers, so the Impact card is never blank on stage.
+export function demoImpact() {
+  return {
+    products: 3,
+    channels_reached: 2,
+    total_views: 47,
+    total_scans: 0,
+    fair_value_uplift: 1420,
+    currency: "INR",
+    baseline_method:
+      "Estimated additional income vs typical underpricing — based on our fair-price engine.",
+  };
+}
+
 // Offline buyer-side search: filter the demo catalogue by title / category so
 // the buyer view still "finds" a product with no backend reachable.
 export function demoSearch(query = "") {

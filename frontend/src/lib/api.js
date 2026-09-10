@@ -10,6 +10,7 @@ import {
   demoPublish,
   demoSearch,
   demoChannels,
+  demoImpact,
 } from "./demoData";
 
 function isNative() {
@@ -265,6 +266,16 @@ export async function listChannels(uid = "") {
     return await jfetch(`/api/channels?uid=${encodeURIComponent(uid)}`);
   } catch {
     return demoChannels();
+  }
+}
+
+/** Impact numbers for an artisan. Falls back to demo numbers offline. */
+export async function getImpact(uid) {
+  if (forcedDemo() || !uid) return demoImpact();
+  try {
+    return await jfetch(`/api/impact/${encodeURIComponent(uid)}`);
+  } catch {
+    return demoImpact();
   }
 }
 
