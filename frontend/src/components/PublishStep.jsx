@@ -121,7 +121,6 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
   // ---- results ----
   const results = res.channel_results || [];
   const ondc = results.find((r) => r.channel_id === "ondc" && r.kind === "live");
-  const shopify = results.find((r) => r.channel_id === "shopify" && r.kind === "live");
 
   return (
     <div className="flex flex-col min-h-full px-5 pb-8 fade-in">
@@ -174,25 +173,6 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
           })}
         </div>
       </div>
-
-      {/* Live Shopify — the real product page, with its own QR */}
-      {shopify && shopify.storefront_url && (
-        <div className="card mt-4 p-5 flex flex-col items-center">
-          <p className="font-bold text-clay-900">🛒 Live on Shopify</p>
-          <p className="text-xs text-clay-500 mt-1">{t("scanHint", lang)}</p>
-          {shopify.qr_url && (
-            <RemoteImage
-              src={shopify.qr_url}
-              alt="Shopify product QR"
-              className="mt-4 w-full max-w-[220px] aspect-square rounded-2xl border border-clay-100 bg-white"
-            />
-          )}
-          <a href={shopify.storefront_url} target="_blank" rel="noreferrer"
-             className="mt-4 text-sm font-semibold text-clay-700 underline decoration-clay-300 underline-offset-4">
-            {t("openStorefront", lang)} ↗
-          </a>
-        </div>
-      )}
 
       {/* ONDC QR + storefront */}
       {res._demo || !qrOk || !ondc ? (

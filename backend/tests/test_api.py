@@ -49,7 +49,6 @@ def test_health_reports_integrations():
     integ = body["integrations"]
     assert integ["gemini"] in ("live", "mock")
     assert isinstance(integ["rembg"], bool)
-    assert integ["shopify"] in ("configured", "off")
     assert integ["firebase"] in ("configured", "off")
 
 
@@ -658,91 +657,6 @@ def test_publish_always_includes_ondc_even_if_omitted():
     }).json()
     ids = [c["channel_id"] for c in body["channel_results"]]
     assert "ondc" in ids
-
-
-# --- Shopify live channel (Phase 3.1) --------------------------------------
-
-
-def test_shopify_unconfigured_degrades_to_demo():
-    """With no SHOPIFY_* env, selecting Shopify must NOT error — it records a
-    clearly-labelled demo publish, and ONDC stays live."""
-    from app.services import shopify_service
-    assert shopify_service.is_configured() is False
-
-    body = client.post("/api/publish", json={
-        "listing": LISTING_FIXTURE, "price": 749, "channels": ["ondc", "shopify"],
-    }).json()
-    results = {c["channel_id"]: c for c in body["channel_results"]}
-
-    assert results["ondc"]["kind"] == "live"
-    shop = results["shopify"]
-    assert shop["kind"] == "demo"
-    assert "demo" in shop["status"].lower()
-    assert shop["storefront_url"] is None
-
-
-def test_channels_report_shopify_configured_flag():
-    rows = {c["id"]: c for c in client.get("/api/channels").json()}
-    assert "shopify" in rows
-    # unconfigured in tests → not truly live
-    assert rows["shopify"]["configured"] is False
-    assert rows["shopify"]["mode"] == "demo"
-    assert rows["ondc"]["configured"] is True and rows["ondc"]["mode"] == "live"
-
-
-def test_shopify_configured_publishes_live(monkeypatch):
-    """With creds set and the Admin API mocked, Shopify returns a LIVE result
-    whose storefront_url is the real product URL."""
-    from app.services import shopify_service
-
-    monkeypatch.setattr(main.settings, "SHOPIFY_STORE_DOMAIN", "demo-shop.myshopify.com")
-    monkeypatch.setattr(main.settings, "SHOPIFY_ADMIN_TOKEN", "shpat_test")
-
-    class _Resp:
-        status_code = 201
-        text = ""
-        def json(self):
-            return {"product": {"id": 987654321, "handle": "handwoven-bamboo-basket"}}
-
-    monkeypatch.setattr(shopify_service.httpx, "post", lambda *a, **k: _Resp())
-
-    body = client.post("/api/publish", json={
-        "listing": LISTING_FIXTURE, "price": 749, "channels": ["ondc", "shopify"],
-    }).json()
-    shop = next(c for c in body["channel_results"] if c["channel_id"] == "shopify")
-
-    assert shop["kind"] == "live" and shop["mode"] == "live"
-    assert shop["status"] == "Live on Shopify"
-    assert shop["storefront_url"] == "https://demo-shop.myshopify.com/products/handwoven-bamboo-basket"
-    assert shop["ref"] == shop["storefront_url"]
-    assert "/api/qr?url=" in shop["qr_url"]
-
-
-def test_shopify_http_error_falls_back_to_demo(monkeypatch):
-    from app.services import shopify_service
-    monkeypatch.setattr(main.settings, "SHOPIFY_STORE_DOMAIN", "demo-shop.myshopify.com")
-    monkeypatch.setattr(main.settings, "SHOPIFY_ADMIN_TOKEN", "shpat_test")
-
-    class _Resp:
-        status_code = 401
-        text = "unauthorized"
-        def json(self):
-            return {}
-
-    monkeypatch.setattr(shopify_service.httpx, "post", lambda *a, **k: _Resp())
-
-    body = client.post("/api/publish", json={
-        "listing": LISTING_FIXTURE, "price": 749, "channels": ["shopify"],
-    }).json()
-    shop = next(c for c in body["channel_results"] if c["channel_id"] == "shopify")
-    assert shop["kind"] == "demo"  # a bad token never breaks publish
-
-
-def test_qr_by_url_encodes_http_urls_only():
-    ok = client.get("/api/qr?url=https://demo-shop.myshopify.com/products/x")
-    assert ok.status_code == 200 and ok.headers["content-type"] == "image/png"
-    assert client.get("/api/qr?url=javascript:alert(1)").status_code == 400
-    assert client.get("/api/qr?url=").status_code in (400, 422)
 
 
 def test_publish_attaches_signed_in_artisan():

@@ -9,8 +9,7 @@ import { signOut } from "../lib/auth";
 // demo mode (shows the demo account).
 
 function ChannelRow({ ch, lang, onConnect, busy }) {
-  const liveReady = ch.mode === "live";                       // truly live (configured)
-  const liveButUnconfigured = ch.kind === "live" && !liveReady; // e.g. Shopify, no .env
+  const liveReady = ch.mode === "live";  // ONDC — the one real, always-live channel
 
   return (
     <div className="flex items-center gap-3 py-2.5">
@@ -19,8 +18,6 @@ function ChannelRow({ ch, lang, onConnect, busy }) {
         <p className="text-sm font-semibold text-clay-900">{ch.name}</p>
         {liveReady ? (
           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-leaf">● {t("liveChannel", lang)}</span>
-        ) : liveButUnconfigured ? (
-          <span className="text-[10px] text-clay-400">Connect — add the store in backend .env</span>
         ) : ch.connected ? (
           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-clay-500">✓ {t("demoConnection", lang)}</span>
         ) : (
@@ -29,8 +26,6 @@ function ChannelRow({ ch, lang, onConnect, busy }) {
       </div>
       {liveReady ? (
         <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[10px]">{t("liveChannel", lang)}</span>
-      ) : liveButUnconfigured ? (
-        <span className="chip !bg-clay-100 !text-clay-500 !py-0.5 text-[10px]">setup</span>
       ) : ch.connected ? (
         <span className="chip !bg-haldi/20 !text-clay-700 !py-0.5 text-[10px]">{t("demoConnection", lang)}</span>
       ) : (

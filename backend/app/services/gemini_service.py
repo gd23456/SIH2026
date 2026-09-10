@@ -24,9 +24,16 @@ _LANG_NAME = {
 _ALWAYS = ("en", "hi", "kn")
 
 # Model names move faster than hackathons do. If the configured model isn't
-# available on a teammate's key, we walk down this list rather than silently
-# dropping to mock — a wrong model name should not cost us the live AI demo.
-_FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+# available on a key, we walk down this list rather than silently dropping to
+# mock — a stale model name should not cost us the live AI demo. "*-latest"
+# aliases auto-track the current flash model, so they survive version bumps
+# (e.g. older gemini-2.5-flash is no longer served to new keys).
+_FALLBACK_MODELS = [
+    "gemini-flash-latest",
+    "gemini-3.5-flash",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash",
+]
 
 # Remembers the model that actually worked, so we pay the discovery cost once.
 _resolved_model: str | None = None

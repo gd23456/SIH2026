@@ -47,7 +47,7 @@ language. Karigar AI does the rest.
 | 🤖 | **Listing** | Writes title, description, material, category, technique, dimensions and search tags — always in English + Hindi + Kannada, plus the artisan's own language. Speak it, **or let AI draft the whole listing from the photo alone** (Gemini vision) |
 | ✓ | **Verified GI** | Matches the craft against the real **Geographical Indication registry** (~160 registered GIs). A verified match ≠ an LLM guess — it earns a green badge and a price premium |
 | 💰 | **Fair price** | A **grounded** number: a market median from comparable listings, a skill premium, and a **fair-wage floor** it can never price below. Shows every line so the artisan can argue with it |
-| 🚀 | **Publish everywhere** | **Publish once, reach every channel.** Real **ONDC RET10** catalog + QR storefront and a real **Shopify** product (Admin API); other channels are clearly-labelled demo adapters |
+| 🚀 | **Publish everywhere** | **Publish once, reach every channel.** Real **ONDC RET10** catalog + QR storefront; other channels are clearly-labelled demo adapters |
 | 🛒 | **Buyer view** | The other side of the network: search the published catalogue and find the item the artisan just created |
 | 👤 | **Account** | Google or phone-OTP sign-in (Firebase), a profile with connected channels + plan, and a "Skip for now (demo)" path that never blocks the demo |
 
@@ -240,7 +240,7 @@ ONDC and Ministry of Textiles people.
 | GI-tag verification | ✅ Real — fuzzy-matched against a **~160-entry registered-GI registry** (distinct from the LLM guess), feeds a +15% premium |
 | Buyer-side ONDC search | ✅ Real (`GET /api/search`, buyer view screen) |
 | Accounts (Google + phone OTP) | ✅ Real via Firebase Web SDK; **demo-account fallback** so it never blocks |
-| Multi-channel publish | ✅ **ONDC + Shopify are real live channels** (Shopify via the Admin API when a store is configured). Meesho/Myntra/Amazon/Flipkart/WhatsApp are clearly-labelled demo adapters (no public seller API, no credential capture) |
+| Multi-channel publish | ✅ **ONDC is the real live channel.** Meesho/Myntra/Amazon/Flipkart/WhatsApp are clearly-labelled demo adapters (no public seller API, no credential capture) |
 | Plans / paid upgrade | ⚠️ Plan flag + Pro screen real; **live Google Play Billing is post-hackathon** (no fake payment) |
 | ONDC catalog | ⚠️ **Schema-correct payload, not yet POSTed to a live BPP.** Registration is an organisational step, not a technical one |
 | Persistence + public storefront | ✅ Real (SQLite; `GET /p/{id}` + QR, served offline over the laptop hotspot) |
@@ -253,12 +253,11 @@ Explicit about what's real today vs what's next — because the panel will ask.
 
 | Live now | Simulated (honestly labelled) | Post-hackathon |
 |---|---|---|
-| **ONDC** catalog + QR storefront and **Shopify** (real product via the Admin API); offline PWA, 9-language voice→listing, grounded pricing, GI verification, buyer search, Google/phone sign-in | Meesho / Myntra / Amazon Karigar / Flipkart Samarth / WhatsApp "connect" + publish (demo adapters — **no credential capture, no fake logins**) | ONDC BPP registration (go live); real seller-API integrations as each marketplace grants access; **Google Play Billing** for Karigar Pro; signed Play Store release |
+| **ONDC** catalog + QR storefront; offline PWA, 9-language voice→listing, grounded pricing, GI verification, buyer search, Google/phone sign-in | Meesho / Myntra / Amazon Karigar / Flipkart Samarth / WhatsApp "connect" + publish (demo adapters — **no credential capture, no fake logins**) | ONDC BPP registration (go live); real seller-API integrations as each marketplace grants access; **Google Play Billing** for Karigar Pro; signed Play Store release |
 
-**ONDC and Shopify are real, end-to-end live channels** (Shopify creates an
-actual product on a configured store). The other marketplaces don't offer a
-public API to link a seller by phone and cross-post, so we built those as
-transparent demo adapters rather than faking a login.
+**ONDC is the one real, end-to-end live channel.** The other marketplaces don't
+offer a public API to link a seller by phone and cross-post, so we built those
+as transparent demo adapters rather than faking a login.
 
 ---
 
@@ -289,7 +288,7 @@ transparent demo adapters rather than faking a login.
 
 ```bash
 make help      # all available commands
-make doctor    # diagnose setup + ping every live integration (Gemini/Shopify)
+make doctor    # diagnose setup + ping every live integration (Gemini)
 make demo      # demo-day checklist + your LAN IP
 ```
 
