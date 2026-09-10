@@ -255,6 +255,44 @@ cd frontend/android
 Install it with `adb install app-debug.apk`, or attach it to a GitHub Release
 so anyone can side-load it.
 
+### Signed release bundle (AAB) for the Play Store
+
+Play Store uploads are **.aab**, signed with your own upload keystore. Live
+Play Store publishing + Play Billing are a post-hackathon process; the steps:
+
+```bash
+# 1. Create an upload keystore once (keep the .jks + passwords safe, NEVER commit)
+keytool -genkey -v -keystore karigar-upload.jks -keyalg RSA -keysize 2048 \
+        -validity 10000 -alias karigar
+
+# 2. Point Gradle at it (e.g. via ~/.gradle/gradle.properties or signingConfigs):
+#    KARIGAR_STORE_FILE / KARIGAR_STORE_PASSWORD / KARIGAR_KEY_ALIAS / KARIGAR_KEY_PASSWORD
+
+# 3. Bump the version in android/app/build.gradle for each release:
+#    versionCode (integer, must increase) + versionName (e.g. "1.1.0")
+
+# 4. Build the signed bundle
+cd frontend
+npm run build && npx cap sync android
+cd android && ./gradlew bundleRelease
+# → app/build/outputs/bundle/release/app-release.aab  → upload to Play Console
+```
+
+Keystores and `*.jks` are gitignored — never commit them. See
+[docs/STORE_LISTING.md](STORE_LISTING.md) for the store copy + asset checklist,
+and [docs/PRIVACY.md](PRIVACY.md) for the required privacy policy.
+
+### App icon & splash
+
+App name (`Karigar AI`) and id (`ai.karigar.app`) are set in
+`frontend/capacitor.config.json` and `android/app/build.gradle`. To regenerate
+launcher icons + splash from a source image:
+
+```bash
+# put a 1024×1024 PNG at frontend/assets/icon.png (or use public/icon.svg)
+cd frontend && npx @capacitor/assets generate --android
+```
+
 ### Gradle build fails
 
 ```bash
