@@ -84,7 +84,7 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
                   <span className="text-xl w-7 text-center">{ch.logo}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-clay-900">{ch.name}</p>
-                    {ch.kind === "live" ? (
+                    {ch.mode === "live" ? (
                       <span className="text-[10px] font-bold text-leaf">● {t("liveChannel", lang)}</span>
                     ) : (
                       <span className="text-[10px] text-clay-400">{t("demoConnection", lang)}</span>
@@ -120,8 +120,8 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
 
   // ---- results ----
   const results = res.channel_results || [];
-  const ondc = results.find((r) => r.kind === "live");
-  const demos = results.filter((r) => r.kind === "demo");
+  const ondc = results.find((r) => r.channel_id === "ondc" && r.kind === "live");
+  const shopify = results.find((r) => r.channel_id === "shopify" && r.kind === "live");
 
   return (
     <div className="flex flex-col min-h-full px-5 pb-8 fade-in">
@@ -151,20 +151,48 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
       <div className="card p-4 mt-4">
         <p className="font-semibold text-clay-800 mb-2">{t("whereLive", lang)}</p>
         <div className="space-y-2">
-          {results.map((r) => (
-            <div key={r.channel_id} className="flex items-center justify-between text-sm">
-              <span className="text-clay-800">
-                {r.kind === "live" ? "✅" : "✅"} {r.status}
-              </span>
-              {r.kind === "live" ? (
-                <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[10px]">{t("liveChannel", lang)}</span>
-              ) : (
-                <span className="chip !bg-haldi/20 !text-clay-700 !py-0.5 text-[10px]">{r.ref}</span>
-              )}
-            </div>
-          ))}
+          {results.map((r) => {
+            const live = r.kind === "live";
+            const linkable = live && r.storefront_url;
+            return (
+              <div key={r.channel_id} className="flex items-center justify-between gap-2 text-sm">
+                {linkable ? (
+                  <a href={r.storefront_url} target="_blank" rel="noreferrer"
+                     className="text-clay-800 font-medium underline decoration-clay-300 underline-offset-2 truncate">
+                    ✅ {r.status} ↗
+                  </a>
+                ) : (
+                  <span className="text-clay-800 truncate">✅ {r.status}</span>
+                )}
+                {live ? (
+                  <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[10px] shrink-0">{t("liveChannel", lang)}</span>
+                ) : (
+                  <span className="chip !bg-haldi/20 !text-clay-700 !py-0.5 text-[10px] shrink-0">{r.ref}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
+
+      {/* Live Shopify — the real product page, with its own QR */}
+      {shopify && shopify.storefront_url && (
+        <div className="card mt-4 p-5 flex flex-col items-center">
+          <p className="font-bold text-clay-900">🛒 Live on Shopify</p>
+          <p className="text-xs text-clay-500 mt-1">{t("scanHint", lang)}</p>
+          {shopify.qr_url && (
+            <RemoteImage
+              src={shopify.qr_url}
+              alt="Shopify product QR"
+              className="mt-4 w-full max-w-[220px] aspect-square rounded-2xl border border-clay-100 bg-white"
+            />
+          )}
+          <a href={shopify.storefront_url} target="_blank" rel="noreferrer"
+             className="mt-4 text-sm font-semibold text-clay-700 underline decoration-clay-300 underline-offset-4">
+            {t("openStorefront", lang)} ↗
+          </a>
+        </div>
+      )}
 
       {/* ONDC QR + storefront */}
       {res._demo || !qrOk || !ondc ? (

@@ -106,6 +106,39 @@ gitignored — never commit real keys.
 
 ---
 
+## Shopify — a second REAL live channel (optional, ~15 min)
+
+Alongside ONDC, Karigar can publish a **real product to a real Shopify store**.
+It's optional: with the two env vars **absent, Shopify behaves exactly like a
+demo channel** and nothing breaks.
+
+One teammate does this once:
+
+1. Create a **development store**: <https://partners.shopify.com> → Stores →
+   Add store → **Development store** (free, for testing).
+2. In that store's admin: **Settings → Apps and sales channels → Develop apps →
+   Create an app** (e.g. "Karigar AI").
+3. **Configuration → Admin API integration → Configure**, grant scopes
+   **`write_products`** and **`read_products`**, save.
+4. **API credentials → Install app**, then reveal the **Admin API access token**
+   (starts with `shpat_`). You also have the store domain
+   `your-store.myshopify.com`.
+5. Put both in `backend/.env`:
+
+   ```
+   SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
+   SHOPIFY_ADMIN_TOKEN=shpat_xxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+
+Restart the backend. At publish, tick **Shopify** — a real product is created
+via the Admin API (`POST /admin/api/2024-10/products.json`) and the results
+screen links straight to its live product page (with a QR). If the token is
+wrong or the network fails, it downgrades to an honest demo result and logs why
+— it never breaks `/api/publish`. **The token is a secret; `.env` is gitignored
+— never commit it.**
+
+---
+
 ## Seed demo data (so the shelf is never empty on stage)
 
 "My Products" and the Buyer view read from the database. On a fresh clone they

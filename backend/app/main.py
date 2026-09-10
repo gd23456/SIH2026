@@ -18,6 +18,7 @@ import base64
 import binascii
 import io
 import logging
+import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -52,6 +53,7 @@ from .services import (
     image_service,
     ondc_service,
     pricing_service,
+    shopify_service,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -186,34 +188,51 @@ def publish(
     storefront = f"{base}/p/{listing_id}"
     title = listing.get("title", {}).get("en", "Handcrafted Product")
 
-    # ONDC is always the real channel; anything else the artisan selected is
-    # recorded as an honest demo publish. De-dupe and guarantee ondc is present.
+    # ONDC is always present + de-duped. Each selected channel is dispatched by
+    # id: ONDC and a configured Shopify publish for real; everything else (and a
+    # Shopify that isn't configured / fails) is recorded as an honest demo.
     selected = list(dict.fromkeys(["ondc", *(req.channels or [])]))
     results: list[ChannelResult] = []
+
+    def _record(cid, ch, *, status, mode, ref, storefront_url=None, qr_url=None):
+        repo.record_channel_publish(
+            session, listing_id=listing_id, channel_id=cid,
+            status=status, mode=mode, channel_ref=ref,
+        )
+        results.append(ChannelResult(
+            channel_id=cid, name=ch["name"], kind=mode, mode=mode,
+            status=status, ref=ref, storefront_url=storefront_url, qr_url=qr_url,
+        ))
+
+    def _demo(cid, ch):
+        ref = channels_service.synthetic_ref(cid)
+        _record(cid, ch, status=channels_service.demo_status(cid), mode="demo", ref=ref)
+
     for cid in selected:
         ch = channels_service.get_channel(cid)
         if ch is None:
             continue
-        if channels_service.is_live(cid):
-            repo.record_channel_publish(
-                session, listing_id=listing_id, channel_id=cid,
-                status="Live on ONDC", mode="live", channel_ref=listing_id,
+
+        if cid == "ondc":
+            _record(cid, ch, status="Live on ONDC", mode="live", ref=listing_id,
+                    storefront_url=storefront, qr_url=f"{base}/api/qr/{listing_id}")
+
+        elif cid == "shopify":
+            result = shopify_service.publish_product(
+                listing, req.price, req.image_b64, artisan_name=req.artisan_name,
             )
-            results.append(ChannelResult(
-                channel_id=cid, name=ch["name"], kind="live", mode="live",
-                status="Live on ONDC", ref=listing_id,
-                storefront_url=storefront, qr_url=f"{base}/api/qr/{listing_id}",
-            ))
+            if result.get("ok"):
+                online = result["online_url"]
+                _record(cid, ch, status="Live on Shopify", mode="live", ref=online,
+                        storefront_url=online,
+                        qr_url=f"{base}/api/qr?url={urllib.parse.quote(online, safe='')}")
+            else:
+                ref = channels_service.synthetic_ref(cid)
+                _record(cid, ch, mode="demo", ref=ref,
+                        status="Published to Shopify (demo — store not configured)")
+
         else:
-            ref = channels_service.synthetic_ref(cid)
-            repo.record_channel_publish(
-                session, listing_id=listing_id, channel_id=cid,
-                status=channels_service.demo_status(cid), mode="demo", channel_ref=ref,
-            )
-            results.append(ChannelResult(
-                channel_id=cid, name=ch["name"], kind="demo", mode="demo",
-                status=channels_service.demo_status(cid), ref=ref,
-            ))
+            _demo(cid, ch)
 
     return PublishResponse(
         listing_id=listing_id,
@@ -254,11 +273,19 @@ def list_channels(uid: str = "", session: Session = Depends(get_session)):
     connected = repo.connected_channels(session, artisan.id if artisan else None)
     out: list[ChannelInfo] = []
     for c in channels_service.all_channels():
-        is_live = c["kind"] == "live"
+        cid = c["id"]
+        # A "live" channel needs its backend credentials to be truly live:
+        # ONDC always, Shopify only when SHOPIFY_* is set.
+        if cid == "shopify":
+            configured = shopify_service.is_configured()
+        else:
+            configured = c["kind"] == "live"
+        live_ready = c["kind"] == "live" and configured
         out.append(ChannelInfo(
-            id=c["id"], name=c["name"], kind=c["kind"], logo=c["logo"], note=c["note"],
-            connected=is_live or c["id"] in connected,
-            mode="live" if is_live else "demo",
+            id=cid, name=c["name"], kind=c["kind"], logo=c["logo"], note=c["note"],
+            configured=configured,
+            connected=live_ready or cid in connected,
+            mode="live" if live_ready else "demo",
         ))
     return out
 
@@ -393,19 +420,33 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
     )
 
 
+def _qr_response(data: str) -> Response:
+    img = qrcode.make(data)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return Response(content=buf.getvalue(), media_type="image/png",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/qr")
+def qr_for_url(url: str):
+    """QR encoding an arbitrary (validated) http(s) URL.
+
+    Used for live channels whose storefront isn't ours — e.g. the real Shopify
+    product page. Restricted to http/https so it can't encode odd schemes.
+    """
+    url = (url or "").strip()
+    if not (url.startswith("http://") or url.startswith("https://")) or len(url) > 2048:
+        raise HTTPException(400, "url must be a valid http(s) URL")
+    return _qr_response(url)
+
+
 @app.get("/api/qr/{listing_id}")
 def qr_png(listing_id: str, request: Request, session: Session = Depends(get_session)):
     """QR encoding the storefront URL for this listing."""
     if repo.get_listing(session, listing_id) is None:
         raise HTTPException(404, "Listing not found")
 
-    img = qrcode.make(f"{_base_url(request)}/p/{listing_id}")
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return Response(
-        content=buf.getvalue(),
-        media_type="image/png",
-        # The same id can be served from a different host (laptop vs LAN IP),
-        # and the encoded URL changes with it, so don't let a proxy pin it.
-        headers={"Cache-Control": "no-store"},
-    )
+    # The same id can be served from a different host (laptop vs LAN IP), and
+    # the encoded URL changes with it, so don't let a proxy pin it.
+    return _qr_response(f"{_base_url(request)}/p/{listing_id}")

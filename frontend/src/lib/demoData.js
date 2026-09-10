@@ -142,8 +142,9 @@ export function demoPrice(listing = {}) {
 // channel; the rest are honestly-labelled demo adapters.
 export function demoChannels() {
   return [
-    { id: "ondc", name: "ONDC", kind: "live", logo: "🟢", note: "Open Network for Digital Commerce — a real, schema-correct catalog + storefront.", connected: true, mode: "live" },
-    { id: "meesho", name: "Meesho", kind: "demo", logo: "🛍️", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
+    { id: "ondc", name: "ONDC", kind: "live", logo: "🟢", note: "Open Network for Digital Commerce — a real, schema-correct catalog + storefront.", connected: true, mode: "live", configured: true },
+    { id: "shopify", name: "Shopify", kind: "live", logo: "🛒", note: "Real storefront via the Shopify Admin API — configure the store in backend .env.", connected: false, mode: "demo", configured: false },
+    { id: "meesho", name: "Meesho", kind: "demo", logo: "🛍️", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo", configured: false },
     { id: "myntra", name: "Myntra", kind: "demo", logo: "👗", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
     { id: "amazon_karigar", name: "Amazon Karigar", kind: "demo", logo: "📦", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
     { id: "flipkart_samarth", name: "Flipkart Samarth", kind: "demo", logo: "🛒", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
@@ -159,7 +160,9 @@ function demoChannelResults(id, storefront, channels) {
     .map((cid) => {
       const ch = _CH_NAMES[cid];
       if (!ch) return null;
-      if (ch.kind === "live") {
+      // Offline, only ONDC is truly live; a real Shopify publish needs the
+      // backend + configured store, so it degrades to a demo record here.
+      if (cid === "ondc") {
         return { channel_id: cid, name: ch.name, kind: "live", mode: "live", status: "Live on ONDC", ref: id, storefront_url: storefront, qr_url: null };
       }
       const ref = cid.split("_")[0].slice(0, 3).toUpperCase() + "-" + Math.random().toString(36).slice(2, 10).toUpperCase();
