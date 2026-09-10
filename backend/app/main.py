@@ -18,6 +18,7 @@ import base64
 import binascii
 import io
 import logging
+import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -412,16 +413,34 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
 
     repo.bump_counter(session, listing_id, "views")  # impact: storefront opened
 
+    artisan = repo.get_artisan(session, listing.artisan_id)
+
+    # The page had no way to actually buy anything. Until we are a registered
+    # ONDC BPP there is no in-network checkout, so we hand the buyer to the
+    # maker on WhatsApp rather than show a dead "Buy" button — addressed to the
+    # artisan's number when we have one, otherwise an open share.
+    order_text = (
+        f'Hi! I\'d like to order "{listing.title_en}" '
+        f"(₹{listing.price:,}) that I found on Karigar AI:\n"
+        f"{_base_url(request)}/p/{listing_id}"
+    )
+    phone = "".join(c for c in (artisan.phone or "") if c.isdigit()) if artisan else ""
+
     return templates.TemplateResponse(
         request=request,
         name="product.html",
         context={
             "listing": listing,
-            "artisan": repo.get_artisan(session, listing.artisan_id),
+            "artisan": artisan,
             # Relative on purpose: the page is already being served from the
             # right origin, and an absolute URL would break if the page were
             # reached via a different host than the one that minted it.
             "qr_url": f"/api/qr/{listing_id}",
+            "wa_order_url": (
+                f"https://wa.me/{phone}?text={urllib.parse.quote(order_text)}"
+                if phone
+                else f"https://wa.me/?text={urllib.parse.quote(order_text)}"
+            ),
         },
     )
 

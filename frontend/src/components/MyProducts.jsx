@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { listListings } from "../lib/api";
+import { listListings, openExternal } from "../lib/api";
 import { Spinner } from "./ui";
 import ProductImage from "./ProductImage";
 
@@ -41,10 +41,15 @@ function ProductCard({ row, lang }) {
   // 404. Show the card, just don't promise a page behind it.
   if (disabled) return card;
 
+  // Not an <a target="_blank">: Capacitor's WebView has multiple-window
+  // support off, so on a device that tap does nothing at all.
   return (
-    <a href={row.storefront_url} target="_blank" rel="noreferrer" className="block">
+    <button
+      onClick={() => openExternal(row.storefront_url)}
+      className="block w-full text-left active:scale-[0.98] transition"
+    >
       {card}
-    </a>
+    </button>
   );
 }
 

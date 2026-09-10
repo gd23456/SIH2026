@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import base64
 import io
+import re
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -517,10 +519,32 @@ def test_published_listing_survives_and_renders():
     assert "Natural Bamboo" in page
     assert body["listing_id"] in page
 
-    # No external requests: the demo phone is on a hotspot with no internet.
+    # No external requests while RENDERING: the demo phone is on a hotspot with
+    # no internet, so nothing the page needs to paint may be fetched remotely.
+    #
+    # Anchor hrefs are deliberately exempt: an <a> is only followed when the
+    # buyer taps it, so the "Order on WhatsApp" link costs nothing offline. We
+    # check the tags that actually issue a request instead of every href.
     for scheme in ("http://", "https://"):
         assert f'src="{scheme}' not in page
-        assert f'href="{scheme}' not in page
+    for tag in re.findall(r"<(?:link|script|img|iframe)\b[^>]*>", page, re.I):
+        assert "http://" not in tag and "https://" not in tag, f"remote resource: {tag}"
+
+
+def test_storefront_offers_a_way_to_actually_buy():
+    """A published product a buyer can look at but not act on is a dead end.
+
+    Until ONDC BPP registration there is no in-network checkout, so the page
+    must at least hand the buyer to the maker with the product prefilled.
+    """
+    body = _publish()
+    page = client.get(f"/p/{body['listing_id']}").text
+
+    assert "wa.me" in page, "storefront must offer a way to order"
+    # the order message has to carry what is being ordered, and from where
+    assert "Order on WhatsApp" in page
+    assert quote(LISTING_FIXTURE["title"]["en"]) in page or LISTING_FIXTURE["title"]["en"] in page
+    assert quote(body["listing_id"]) in page or body["listing_id"] in page
 
 
 def test_storefront_has_language_switcher_not_stacked_descriptions():
