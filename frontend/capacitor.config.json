@@ -11,7 +11,16 @@
   },
   "plugins": {
     "SpeechRecognition": {
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": [
+        "google.com",
+        "phone"
+      ]
     }
   }
 }

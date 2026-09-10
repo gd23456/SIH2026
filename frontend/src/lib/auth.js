@@ -8,6 +8,13 @@
 //    localStorage. This is the stage-insurance path: a login/Firebase misconfig
 //    can NEVER block the demo.
 //
+// On ANDROID the Web SDK's signInWithPopup cannot work: it opens an OAuth popup
+// and waits for a callback the WebView never delivers, and Google will not
+// redirect back to Capacitor's https://localhost origin. So native runs through
+// @capacitor-firebase/authentication instead, which uses the real Google
+// Sign-In and Play Services SMS flows and reads its config from
+// android/app/google-services.json rather than the VITE_FIREBASE_* vars.
+//
 // The shape returned everywhere is a plain artisan object:
 //   { uid, name, email, phone, photoURL, demo }
 
@@ -22,7 +29,29 @@ const CFG = {
   storageBucket: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET,
 };
 
+function isNative() {
+  return Boolean(typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.());
+}
+
+let _native = null;
+async function nativeAuth() {
+  // Wrapped in an object on purpose. A Capacitor plugin proxy answers ANY
+  // property access, including `then`, so returning it straight out of an async
+  // function makes JS treat it as a thenable and call `.then()` on it - which
+  // Capacitor forwards to native and fails with
+  //   "FirebaseAuthentication.then()" is not implemented on android
+  if (!_native) {
+    const mod = await import("@capacitor-firebase/authentication");
+    _native = { FA: mod.FirebaseAuthentication };
+  }
+  return _native;
+}
+
 export function isFirebaseConfigured() {
+  // Native reads google-services.json at build time, so the VITE_ vars are not
+  // required there - requiring them would drop the APK into demo mode even
+  // with Firebase correctly wired.
+  if (isNative()) return true;
   return Boolean(CFG.apiKey && CFG.authDomain && CFG.projectId && CFG.appId);
 }
 
@@ -84,8 +113,14 @@ function normalize(user) {
   });
 }
 
-/** Google sign-in (popup). Returns the artisan object. */
+/** Google sign-in. Native uses real Google Sign-In; web uses the popup. */
 export async function signInWithGoogle() {
+  if (isNative()) {
+    const { FA } = await nativeAuth();
+    const { user } = await FA.signInWithGoogle();
+    if (!user) throw new Error("google-signin-cancelled");
+    return normalize(user);
+  }
   const { auth, mod } = await fb();
   const provider = new mod.GoogleAuthProvider();
   const cred = await mod.signInWithPopup(auth, provider);
@@ -99,6 +134,31 @@ export async function signInWithGoogle() {
  * @param recaptchaContainerId id of a DOM node to host the invisible reCAPTCHA
  */
 export async function startPhoneSignIn(phone, recaptchaContainerId) {
+  if (isNative()) {
+    // Play Services handles verification natively - no reCAPTCHA widget, which
+    // would hit the same WebView limitation as the Google popup. Android can
+    // also auto-verify, in which case a user comes back immediately and there
+    // is no code to enter.
+    const { FA } = await nativeAuth();
+    const res = await FA.signInWithPhoneNumber({ phoneNumber: phone });
+    if (res?.user) {
+      const acc = normalize(res.user);
+      return { confirm: async () => acc, autoVerified: true };
+    }
+    const verificationId = res?.verificationId;
+    if (!verificationId) throw new Error("phone-verification-unavailable");
+    return {
+      confirm: async (code) => {
+        const out = await FA.confirmVerificationCode({
+          verificationId,
+          verificationCode: code,
+        });
+        if (!out?.user) throw new Error("phone-verification-failed");
+        return normalize(out.user);
+      },
+    };
+  }
+
   const { auth, mod } = await fb();
   const verifier = new mod.RecaptchaVerifier(auth, recaptchaContainerId, { size: "invisible" });
   const confirmation = await mod.signInWithPhoneNumber(auth, phone, verifier);
@@ -110,7 +170,10 @@ export async function startPhoneSignIn(phone, recaptchaContainerId) {
 /** Sign out of whichever mode is active and clear local state. */
 export async function signOut() {
   try {
-    if (isFirebaseConfigured() && _fb) {
+    if (isNative()) {
+      const { FA } = await nativeAuth();
+      await FA.signOut();
+    } else if (isFirebaseConfigured() && _fb) {
       await _fb.mod.signOut(_fb.auth);
     }
   } catch {}
