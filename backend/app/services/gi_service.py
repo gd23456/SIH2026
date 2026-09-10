@@ -85,7 +85,11 @@ def verify(listing: dict) -> dict:
     best: dict | None = None
     best_score = 0.0
     for entry in _registry():
-        s = _score(hay, hay_tokens, entry["name"])
+        # Score the canonical name and any alternate spellings, keep the best.
+        # The registry holds one row per GI, so without this a listing saying
+        # "Kondapalli toy" would miss the row named "Kondapalli Bommallu".
+        # Whatever matched, the canonical name is what gets reported.
+        s = max(_score(hay, hay_tokens, n) for n in (entry["name"], *entry.get("aliases", ())))
         if s > best_score:
             best_score, best = s, entry
 
