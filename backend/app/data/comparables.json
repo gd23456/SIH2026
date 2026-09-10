@@ -2,7 +2,8 @@
   "_meta": {
     "description": "Observed market price bands (INR) for handmade goods, hand-curated from public ONDC / Amazon Karigar / Etsy 'handmade in India' listings. Used to ground the AI's fair-price estimate against what comparable items actually sell for. sample_count is the honest number of listings we eyeballed per category, not a scraped dataset.",
     "currency": "INR",
-    "last_reviewed": "2026-09-10"
+    "last_reviewed": "2026-09-10",
+    "provisional_note": "Categories with sample_count 0 are provisional estimates, not sampled data. They exist so an unmatched craft is not priced off the generic default; they should be replaced with observed listings before submission."
   },
   "Bamboo & Cane Storage": {
     "median": 720,
@@ -11,19 +12,26 @@
     "sample_count": 34,
     "source": "ONDC/Amazon/Etsy observed listings"
   },
-  "Terracotta & Pottery Decor": {
-    "median": 860,
-    "band_low": 520,
-    "band_high": 1600,
-    "sample_count": 29,
+  "Brassware & Metal Craft": {
+    "median": 1450,
+    "band_low": 780,
+    "band_high": 3400,
+    "sample_count": 27,
     "source": "ONDC/Amazon/Etsy observed listings"
   },
-  "Handloom Silk Saree": {
-    "median": 8200,
-    "band_low": 5200,
-    "band_high": 15500,
-    "sample_count": 23,
-    "source": "ONDC/Amazon/Etsy observed listings"
+  "Carpets & Durries": {
+    "median": 4200,
+    "band_low": 1500,
+    "band_high": 22000,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
+  },
+  "Carved Wood & Furniture": {
+    "median": 2200,
+    "band_low": 900,
+    "band_high": 12000,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
   },
   "Channapatna Wooden Toys": {
     "median": 640,
@@ -32,6 +40,35 @@
     "sample_count": 41,
     "source": "ONDC/Amazon/Etsy observed listings"
   },
+  "Embroidered Textiles": {
+    "median": 1900,
+    "band_low": 700,
+    "band_high": 9500,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
+  },
+  "Folk & Tribal Painting": {
+    "median": 2400,
+    "band_low": 900,
+    "band_high": 12000,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
+  },
+  "Handloom Silk Saree": {
+    "median": 8200,
+    "band_low": 5200,
+    "band_high": 42000,
+    "sample_count": 23,
+    "source": "ONDC/Amazon/Etsy observed listings",
+    "note": "Ceiling covers genuine gold-zari Kanjivaram/Banarasi; everyday handloom silk sits near the median."
+  },
+  "Handmade Jewellery": {
+    "median": 1800,
+    "band_low": 600,
+    "band_high": 9000,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
+  },
   "Jute Bags": {
     "median": 430,
     "band_low": 240,
@@ -39,11 +76,32 @@
     "sample_count": 38,
     "source": "ONDC/Amazon/Etsy observed listings"
   },
-  "Brassware & Metal Craft": {
-    "median": 1450,
-    "band_low": 780,
-    "band_high": 3400,
-    "sample_count": 27,
+  "Leather Craft": {
+    "median": 1100,
+    "band_low": 500,
+    "band_high": 3500,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
+  },
+  "Papier-mache & Lacquerware": {
+    "median": 900,
+    "band_low": 350,
+    "band_high": 4500,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
+  },
+  "Stone & Marble Craft": {
+    "median": 2600,
+    "band_low": 900,
+    "band_high": 15000,
+    "sample_count": 0,
+    "source": "PROVISIONAL estimate from category knowledge - NOT yet sampled. Replace with observed listings before submission."
+  },
+  "Terracotta & Pottery Decor": {
+    "median": 860,
+    "band_low": 520,
+    "band_high": 1600,
+    "sample_count": 29,
     "source": "ONDC/Amazon/Etsy observed listings"
   },
   "default": {
