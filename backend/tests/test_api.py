@@ -49,7 +49,6 @@ def test_health_reports_integrations():
     integ = body["integrations"]
     assert integ["gemini"] in ("live", "mock")
     assert isinstance(integ["rembg"], bool)
-    assert integ["shopify"] in ("configured", "off")
     assert integ["firebase"] in ("configured", "off")
 
 
@@ -139,6 +138,18 @@ def test_generate_listing_carries_the_chosen_language(language):
     # the chosen language is present and not identical to English
     assert listing["title"].get(language, "").strip()
     assert listing["title"][language] != listing["title"]["en"]
+
+
+def test_generate_listing_sets_source_header():
+    """The client reads X-Karigar-Mode to show an honest AI/demo badge.
+    In mock mode (tests) it must be 'mock', never 'live'."""
+    r = client.post("/api/generate-listing", json={"transcript": "bamboo basket", "language": "en"})
+    assert r.headers.get("X-Karigar-Mode") == "mock"
+
+
+def test_price_sets_source_header():
+    r = client.post("/api/price", json={"title": "Bamboo Basket", "material": "Bamboo", "production_time": "3 days"})
+    assert r.headers.get("X-Karigar-Mode") == "mock"
 
 
 def test_generate_listing_handles_unknown_craft():
@@ -453,6 +464,16 @@ def test_published_listing_survives_and_renders():
         assert f'href="{scheme}' not in page
 
 
+def test_storefront_has_language_switcher_not_stacked_descriptions():
+    """The storefront must offer a language switcher, not three stacked copies."""
+    body = _publish()
+    page = client.get(f"/p/{body['listing_id']}").text
+    assert 'id="langtabs"' in page
+    assert 'data-lang="hi"' in page and 'data-lang="kn"' in page
+    # non-English title/description blocks start hidden (one shown at a time)
+    assert "hidden" in page
+
+
 def test_storefront_page_embeds_its_own_qr():
     body = _publish()
     page = client.get(f"/p/{body['listing_id']}").text
@@ -660,91 +681,6 @@ def test_publish_always_includes_ondc_even_if_omitted():
     assert "ondc" in ids
 
 
-# --- Shopify live channel (Phase 3.1) --------------------------------------
-
-
-def test_shopify_unconfigured_degrades_to_demo():
-    """With no SHOPIFY_* env, selecting Shopify must NOT error — it records a
-    clearly-labelled demo publish, and ONDC stays live."""
-    from app.services import shopify_service
-    assert shopify_service.is_configured() is False
-
-    body = client.post("/api/publish", json={
-        "listing": LISTING_FIXTURE, "price": 749, "channels": ["ondc", "shopify"],
-    }).json()
-    results = {c["channel_id"]: c for c in body["channel_results"]}
-
-    assert results["ondc"]["kind"] == "live"
-    shop = results["shopify"]
-    assert shop["kind"] == "demo"
-    assert "demo" in shop["status"].lower()
-    assert shop["storefront_url"] is None
-
-
-def test_channels_report_shopify_configured_flag():
-    rows = {c["id"]: c for c in client.get("/api/channels").json()}
-    assert "shopify" in rows
-    # unconfigured in tests → not truly live
-    assert rows["shopify"]["configured"] is False
-    assert rows["shopify"]["mode"] == "demo"
-    assert rows["ondc"]["configured"] is True and rows["ondc"]["mode"] == "live"
-
-
-def test_shopify_configured_publishes_live(monkeypatch):
-    """With creds set and the Admin API mocked, Shopify returns a LIVE result
-    whose storefront_url is the real product URL."""
-    from app.services import shopify_service
-
-    monkeypatch.setattr(main.settings, "SHOPIFY_STORE_DOMAIN", "demo-shop.myshopify.com")
-    monkeypatch.setattr(main.settings, "SHOPIFY_ADMIN_TOKEN", "shpat_test")
-
-    class _Resp:
-        status_code = 201
-        text = ""
-        def json(self):
-            return {"product": {"id": 987654321, "handle": "handwoven-bamboo-basket"}}
-
-    monkeypatch.setattr(shopify_service.httpx, "post", lambda *a, **k: _Resp())
-
-    body = client.post("/api/publish", json={
-        "listing": LISTING_FIXTURE, "price": 749, "channels": ["ondc", "shopify"],
-    }).json()
-    shop = next(c for c in body["channel_results"] if c["channel_id"] == "shopify")
-
-    assert shop["kind"] == "live" and shop["mode"] == "live"
-    assert shop["status"] == "Live on Shopify"
-    assert shop["storefront_url"] == "https://demo-shop.myshopify.com/products/handwoven-bamboo-basket"
-    assert shop["ref"] == shop["storefront_url"]
-    assert "/api/qr?url=" in shop["qr_url"]
-
-
-def test_shopify_http_error_falls_back_to_demo(monkeypatch):
-    from app.services import shopify_service
-    monkeypatch.setattr(main.settings, "SHOPIFY_STORE_DOMAIN", "demo-shop.myshopify.com")
-    monkeypatch.setattr(main.settings, "SHOPIFY_ADMIN_TOKEN", "shpat_test")
-
-    class _Resp:
-        status_code = 401
-        text = "unauthorized"
-        def json(self):
-            return {}
-
-    monkeypatch.setattr(shopify_service.httpx, "post", lambda *a, **k: _Resp())
-
-    body = client.post("/api/publish", json={
-        "listing": LISTING_FIXTURE, "price": 749, "channels": ["shopify"],
-    }).json()
-    shop = next(c for c in body["channel_results"] if c["channel_id"] == "shopify")
-    assert shop["kind"] == "demo"  # a bad token never breaks publish
-
-
-def test_qr_by_url_encodes_http_urls_only():
-    ok = client.get("/api/qr?url=https://demo-shop.myshopify.com/products/x")
-    assert ok.status_code == 200 and ok.headers["content-type"] == "image/png"
-    assert client.get("/api/qr?url=javascript:alert(1)").status_code == 400
-    assert client.get("/api/qr?url=").status_code in (400, 422)
-
-
 def test_publish_attaches_signed_in_artisan():
     client.post("/api/publish", json={
         "listing": LISTING_FIXTURE, "price": 749,
@@ -761,3 +697,43 @@ def test_listing_image_404s_without_a_photo():
     body = _publish()  # fixture carries no image
     assert client.get(f"/api/listings/{body['listing_id']}/image").status_code == 404
     assert client.get("/api/listings/KARIGAR-NOPE/image").status_code == 404
+
+
+# --- impact dashboard (Phase 3) --------------------------------------------
+
+
+def test_storefront_view_increments_the_counter():
+    body = _publish(price=1000, artisan_name="Uma", location="Pune",
+                    artisan_uid="uid-impact-1")
+    before = client.get("/api/impact/uid-impact-1").json()["total_views"]
+    client.get(f"/p/{body['listing_id']}")
+    client.get(f"/p/{body['listing_id']}")
+    after = client.get("/api/impact/uid-impact-1").json()["total_views"]
+    assert after == before + 2
+
+
+def test_impact_sums_uplift_and_reach():
+    uid = "uid-impact-2"
+    client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": 1000, "artisan_uid": uid,
+        "artisan_name": "Nadia", "location": "Kutch", "channels": ["ondc", "meesho"],
+    })
+    client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": 2000, "artisan_uid": uid,
+        "artisan_name": "Nadia", "location": "Kutch", "channels": ["ondc"],
+    })
+    imp = client.get(f"/api/impact/{uid}").json()
+    assert imp["products"] == 2
+    # 30% conservative uplift on 1000 + 2000 = 300 + 600
+    assert imp["fair_value_uplift"] == 900
+    assert imp["channels_reached"] == 2      # ondc + meesho across the two
+    assert imp["baseline_method"]            # documented + defensible
+
+
+def test_impact_unknown_artisan_is_zeroed_not_error():
+    imp = client.get("/api/impact/nobody-here").json()
+    assert imp == {
+        "products": 0, "channels_reached": 0, "total_views": 0,
+        "total_scans": 0, "fair_value_uplift": 0, "currency": "INR",
+        "baseline_method": imp["baseline_method"],
+    }

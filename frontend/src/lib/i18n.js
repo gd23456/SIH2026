@@ -301,6 +301,21 @@ const STR = {
     kn: "ಈಗ ಶುಲ್ಕವಿಲ್ಲ — Google Play ಬಿಲ್ಲಿಂಗ್ ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ.",
   },
   privacy: { en: "Privacy policy", hi: "गोपनीयता नीति", kn: "ಗೌಪ್ಯತಾ ನೀತಿ" },
+  // impact dashboard
+  impact: { en: "Your impact", hi: "आपका प्रभाव", kn: "ನಿಮ್ಮ ಪ್ರಭಾವ" },
+  impactUplift: {
+    en: "more earned through fair pricing",
+    hi: "उचित मूल्य से अधिक कमाई",
+    kn: "ನ್ಯಾಯಯುತ ಬೆಲೆಯಿಂದ ಹೆಚ್ಚು ಗಳಿಕೆ",
+  },
+  impactProducts: { en: "products live", hi: "उत्पाद लाइव", kn: "ಉತ್ಪನ್ನಗಳು ಲೈವ್" },
+  impactChannels: { en: "channels", hi: "चैनल", kn: "ಚಾನೆಲ್‌ಗಳು" },
+  impactViews: { en: "storefront views", hi: "दुकान दृश्य", kn: "ಅಂಗಡಿ ವೀಕ್ಷಣೆಗಳು" },
+  impactNote: {
+    en: "Estimated additional income vs typical underpricing — based on our fair-price engine.",
+    hi: "सामान्य कम मूल्य की तुलना में अनुमानित अतिरिक्त आय — हमारे उचित-मूल्य इंजन पर आधारित।",
+    kn: "ಸಾಮಾನ್ಯ ಕಡಿಮೆ ಬೆಲೆಗೆ ಹೋಲಿಸಿದರೆ ಅಂದಾಜು ಹೆಚ್ಚುವರಿ ಆದಾಯ — ನಮ್ಮ ನ್ಯಾಯಯುತ-ಬೆಲೆ ಎಂಜಿನ್ ಆಧರಿಸಿ.",
+  },
 };
 
 export function t(key, lang = "en") {

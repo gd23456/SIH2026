@@ -10,7 +10,6 @@ import importlib.util
 from pathlib import Path
 
 from ..config import get_settings
-from . import shopify_service
 
 # backend/app/services/integrations.py → parents[3] is the repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -23,10 +22,6 @@ def rembg_available() -> bool:
 
 def gemini_status() -> str:
     return "mock" if get_settings().use_mock else "live"
-
-
-def shopify_status() -> str:
-    return "configured" if shopify_service.is_configured() else "off"
 
 
 def firebase_status() -> str:
@@ -51,6 +46,5 @@ def status() -> dict:
     return {
         "gemini": gemini_status(),
         "rembg": rembg_available(),
-        "shopify": shopify_status(),
         "firebase": firebase_status(),
     }

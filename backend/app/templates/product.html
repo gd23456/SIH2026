@@ -43,6 +43,11 @@
   .gi-verified{display:inline-block;font-size:12px;font-weight:700;color:#fff;
       background:var(--green);border:1px solid var(--green);border-radius:999px;
       padding:3px 11px;margin-top:8px}
+  .langtabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+  .langtab{font-size:13px;font-weight:600;color:var(--muted);background:transparent;
+      border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;
+      min-height:36px}
+  .langtab.active{color:#fff;background:var(--brand);border-color:var(--brand)}
   p.desc{margin:10px 0 0}
   p.desc + p.desc{margin-top:8px;color:var(--muted);font-size:15px}
   dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
@@ -82,9 +87,16 @@
   {% endif %}
 
   <div class="card">
-    <h1>{{ listing.title_en }}</h1>
-    {% if listing.title_hi %}<p class="alt">{{ listing.title_hi }}</p>{% endif %}
-    {% if listing.title_kn %}<p class="alt">{{ listing.title_kn }}</p>{% endif %}
+    <!-- One title + one description, switchable — not three stacked copies. -->
+    <div class="langtabs" id="langtabs">
+      <button type="button" class="langtab active" data-lang="en">English</button>
+      {% if listing.title_hi or listing.description_hi %}<button type="button" class="langtab" data-lang="hi">हिन्दी</button>{% endif %}
+      {% if listing.title_kn or listing.description_kn %}<button type="button" class="langtab" data-lang="kn">ಕನ್ನಡ</button>{% endif %}
+    </div>
+
+    <h1 class="ttl" data-lang="en">{{ listing.title_en }}</h1>
+    {% if listing.title_hi %}<h1 class="ttl" data-lang="hi" hidden>{{ listing.title_hi }}</h1>{% endif %}
+    {% if listing.title_kn %}<h1 class="ttl" data-lang="kn" hidden>{{ listing.title_kn }}</h1>{% endif %}
 
     <div class="pricerow">
       <span class="price">₹{{ "{:,}".format(listing.price) }}</span>
@@ -97,9 +109,9 @@
       <span class="gi">🏷️ Possible GI: {{ listing.gi_candidate }}</span>
     {% endif %}
 
-    {% if listing.description_en %}<p class="desc">{{ listing.description_en }}</p>{% endif %}
-    {% if listing.description_hi %}<p class="desc">{{ listing.description_hi }}</p>{% endif %}
-    {% if listing.description_kn %}<p class="desc">{{ listing.description_kn }}</p>{% endif %}
+    {% if listing.description_en %}<p class="desc" data-lang="en">{{ listing.description_en }}</p>{% endif %}
+    {% if listing.description_hi %}<p class="desc" data-lang="hi" hidden>{{ listing.description_hi }}</p>{% endif %}
+    {% if listing.description_kn %}<p class="desc" data-lang="kn" hidden>{{ listing.description_kn }}</p>{% endif %}
 
     {% if listing.tags %}
       <div class="tags">
@@ -143,5 +155,36 @@
   </footer>
 
 </div>
+<script>
+  // Language switcher for title + description. Shows one language at a time;
+  // falls back to English for any piece a language is missing. Inline + tiny —
+  // the storefront must work offline with no external scripts.
+  (function () {
+    function show(cls, lang) {
+      var els = document.querySelectorAll("." + cls);
+      var shown = false;
+      els.forEach(function (e) {
+        var match = e.getAttribute("data-lang") === lang;
+        e.hidden = !match;
+        if (match) shown = true;
+      });
+      if (!shown) els.forEach(function (e) {
+        if (e.getAttribute("data-lang") === "en") e.hidden = false;
+      });
+    }
+    function setLang(lang) {
+      document.querySelectorAll(".langtab").forEach(function (b) {
+        b.classList.toggle("active", b.getAttribute("data-lang") === lang);
+      });
+      show("ttl", lang);
+      show("desc", lang);
+    }
+    var tabs = document.getElementById("langtabs");
+    if (tabs) tabs.addEventListener("click", function (ev) {
+      var b = ev.target.closest(".langtab");
+      if (b) setLang(b.getAttribute("data-lang"));
+    });
+  })();
+</script>
 </body>
 </html>

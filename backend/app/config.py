@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-flash-latest"
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,https://localhost"
     FORCE_MOCK: str = "0"
 
@@ -20,11 +20,6 @@ class Settings(BaseSettings):
     # hotspot on demo day. Only set this when deploying to a real domain.
     PUBLIC_BASE_URL: str = ""
     DATABASE_URL: str = "sqlite:///./karigar.db"
-
-    # Shopify Admin API (optional). When both are set, Shopify becomes a second
-    # REAL live channel; when absent it degrades to an honest demo channel.
-    SHOPIFY_STORE_DOMAIN: str = ""   # e.g. your-store.myshopify.com
-    SHOPIFY_ADMIN_TOKEN: str = ""    # shpat_...
 
     @property
     def cors_list(self) -> list[str]:

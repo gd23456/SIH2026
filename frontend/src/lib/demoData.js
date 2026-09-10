@@ -143,7 +143,6 @@ export function demoPrice(listing = {}) {
 export function demoChannels() {
   return [
     { id: "ondc", name: "ONDC", kind: "live", logo: "🟢", note: "Open Network for Digital Commerce — a real, schema-correct catalog + storefront.", connected: true, mode: "live", configured: true },
-    { id: "shopify", name: "Shopify", kind: "live", logo: "🛒", note: "Real storefront via the Shopify Admin API — configure the store in backend .env.", connected: false, mode: "demo", configured: false },
     { id: "meesho", name: "Meesho", kind: "demo", logo: "🛍️", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo", configured: false },
     { id: "myntra", name: "Myntra", kind: "demo", logo: "👗", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
     { id: "amazon_karigar", name: "Amazon Karigar", kind: "demo", logo: "📦", note: "Simulated for the prototype — real seller-API integration is on the roadmap.", connected: false, mode: "demo" },
@@ -160,8 +159,7 @@ function demoChannelResults(id, storefront, channels) {
     .map((cid) => {
       const ch = _CH_NAMES[cid];
       if (!ch) return null;
-      // Offline, only ONDC is truly live; a real Shopify publish needs the
-      // backend + configured store, so it degrades to a demo record here.
+      // ONDC is the one real live channel; everything else is a demo record.
       if (cid === "ondc") {
         return { channel_id: cid, name: ch.name, kind: "live", mode: "live", status: "Live on ONDC", ref: id, storefront_url: storefront, qr_url: null };
       }
@@ -236,6 +234,20 @@ export function demoListings() {
       gi_state: "Karnataka",
     }),
   ];
+}
+
+// Offline demo impact numbers, so the Impact card is never blank on stage.
+export function demoImpact() {
+  return {
+    products: 3,
+    channels_reached: 2,
+    total_views: 47,
+    total_scans: 0,
+    fair_value_uplift: 1420,
+    currency: "INR",
+    baseline_method:
+      "Estimated additional income vs typical underpricing — based on our fair-price engine.",
+  };
 }
 
 // Offline buyer-side search: filter the demo catalogue by title / category so

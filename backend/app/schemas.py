@@ -125,6 +125,16 @@ class ArtisanOut(BaseModel):
 # --- channels (Phase 3) ----------------------------------------------------
 
 
+class ImpactOut(BaseModel):
+    products: int = 0
+    channels_reached: int = 0
+    total_views: int = 0
+    total_scans: int = 0
+    fair_value_uplift: int = 0
+    currency: str = "INR"
+    baseline_method: str = ""
+
+
 class ChannelInfo(BaseModel):
     id: str
     name: str
@@ -133,8 +143,7 @@ class ChannelInfo(BaseModel):
     note: str = ""
     connected: bool = False
     mode: str = "demo"
-    # A "live" channel is only truly live when its backend credentials exist
-    # (ONDC always; Shopify only when SHOPIFY_* env vars are set).
+    # True for the real live channel (ONDC); False for the demo adapters.
     configured: bool = True
 
 

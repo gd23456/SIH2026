@@ -16,6 +16,11 @@ _db = Path(tempfile.mkdtemp(prefix="karigar-tests-")) / "test.db"
 # as_posix(): a Windows path with backslashes is not a valid sqlite URL.
 os.environ["DATABASE_URL"] = f"sqlite:///{_db.as_posix()}"
 
+# Always exercise the mock/offline path in tests — deterministic, fast, and no
+# network. This also protects a developer who has a real GEMINI_API_KEY in
+# backend/.env from having the suite make live API calls.
+os.environ["FORCE_MOCK"] = "1"
+
 # Create the tables explicitly. The app does this in its lifespan handler, but
 # `TestClient(app)` only runs lifespan when used as a context manager, and the
 # suite constructs the client at module scope. Import order matters: this must

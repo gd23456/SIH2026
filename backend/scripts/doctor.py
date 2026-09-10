@@ -4,8 +4,8 @@
     python backend/scripts/doctor.py    # from repo root
 
 Prints each integration's status and does a lightweight LIVE ping of Gemini
-(one tiny call) and, if configured, Shopify — reporting OK or the exact reason
-it isn't live. Never changes anything; safe to run any time.
+(one tiny call) — reporting OK or the exact reason it isn't live. Never changes
+anything; safe to run any time.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ except Exception:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.services import gemini_service, integrations, shopify_service  # noqa: E402
+from app.services import gemini_service, integrations  # noqa: E402
 
 
 def _line(label: str, value: str) -> None:
@@ -33,7 +33,6 @@ def main() -> int:
     _line("gemini:", st["gemini"])
     _line("rembg:", "installed (real background removal)" if st["rembg"]
           else "not installed (studio-composite fallback — fine)")
-    _line("shopify:", st["shopify"])
     _line("firebase:", st["firebase"] + "  (frontend/.env VITE_FIREBASE_*)")
 
     print("\n  Live checks:")
@@ -47,16 +46,6 @@ def main() -> int:
             _line("gemini ping:", f"NOT LIVE · {g.get('reason')}")
     else:
         _line("gemini ping:", "skipped — mock mode (set GEMINI_API_KEY for live)")
-
-    # Shopify — shop.json, only if configured.
-    if shopify_service.is_configured():
-        h = shopify_service.health()
-        if h.get("ok"):
-            _line("shopify ping:", "OK · store reachable, token valid")
-        else:
-            _line("shopify ping:", f"NOT LIVE · {h.get('reason', h.get('status'))}")
-    else:
-        _line("shopify ping:", "skipped — SHOPIFY_STORE_DOMAIN/ADMIN_TOKEN not set")
 
     print("\n  (Missing integrations are fine — the app degrades to the offline"
           "\n   mock/demo path so the full flow still runs.)\n")
