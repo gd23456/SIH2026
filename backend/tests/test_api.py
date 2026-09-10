@@ -185,6 +185,65 @@ def test_generate_listing_omitting_transcript_is_allowed():
     assert r.json()["title"]["en"]
 
 
+# Script block each language must actually be written in. Marathi shares
+# Devanagari with Hindi, which is correct - it is the same script.
+_SCRIPTS = {
+    "hi": (0x0900, 0x097F), "mr": (0x0900, 0x097F), "bn": (0x0980, 0x09FF),
+    "gu": (0x0A80, 0x0AFF), "or": (0x0B00, 0x0B7F), "ta": (0x0B80, 0x0BFF),
+    "te": (0x0C00, 0x0C7F), "kn": (0x0C80, 0x0CFF),
+}
+
+
+def _script_vs_latin(text: str, lo: int, hi: int) -> tuple[int, int]:
+    """(chars in the target script, ASCII letters) - for "is this really Tamil?"."""
+    target = sum(1 for ch in text if lo <= ord(ch) <= hi)
+    latin = sum(1 for ch in text if ch.isascii() and ch.isalpha())
+    return target, latin
+
+
+@pytest.mark.parametrize("lang", sorted(_SCRIPTS))
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "handmade bamboo basket",
+        "clay terracotta vase",
+        "mysore silk saree",
+        "channapatna wooden toy",
+        "some craft we have never seen before",  # falls through to the default
+    ],
+)
+def test_generate_listing_is_actually_translated(transcript, lang):
+    """Every language must be real text in its own script, not English relabelled.
+
+    Mock mode is the stage fallback, and "a listing in nine languages at once"
+    is the claim being made while this screen is on the projector. A non-empty
+    check is not enough: the previous implementation regex-swapped ~17 English
+    words per language, which left every description byte-identical to English
+    and still passed a non-empty assertion.
+    """
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": transcript, "language": lang},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    lo, hi = _SCRIPTS[lang]
+
+    for field in ("title", "description"):
+        assert lang in listing[field], f"{field} missing {lang}"
+        en = listing[field]["en"]
+        got = listing[field][lang]
+
+        assert got != en, f"{field}.{lang} is identical to English"
+
+        # Not merely "contains one translated word" - the target script has to
+        # outweigh the Latin text, or it is English with a few nouns swapped.
+        script, latin = _script_vs_latin(got, lo, hi)
+        assert script > latin, (
+            f"{field}.{lang} is mostly Latin ({script} in-script vs {latin} ASCII)"
+        )
+
+
 # --- fair price -----------------------------------------------------------
 
 
