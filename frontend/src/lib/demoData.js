@@ -226,6 +226,16 @@ export function demoListings() {
     created_at: new Date().toISOString(),
     _demo: true,
   });
+  const silkTitle = {
+    en: "Handloom Mysore Silk Saree",
+    hi: "हस्तनिर्मित मैसूर रेशम साड़ी",
+    kn: "ಕೈಮಗ್ಗ ಮೈಸೂರು ರೇಷ್ಮೆ ಸೀರೆ",
+  };
+  const juteTitle = {
+    en: "Handwoven Jute Tote Bag",
+    hi: "हस्तनिर्मित जूट बैग",
+    kn: "ಕೈಮಗ್ಗ ಸೆಣಬು ಚೀಲ",
+  };
   return [
     mk("KARIGAR-DEMO0001", demoListing("bamboo basket").title, 1200, "Home & Living / Storage"),
     mk("KARIGAR-DEMO0002", demoListing("clay vase").title, 1600, "Home & Living / Decor"),
@@ -233,6 +243,11 @@ export function demoListings() {
       gi_verified: true,
       gi_state: "Karnataka",
     }),
+    mk("KARIGAR-DEMO0004", silkTitle, 5520, "Clothing / Ethnic Wear", {
+      gi_verified: true,
+      gi_state: "Karnataka",
+    }),
+    mk("KARIGAR-DEMO0005", juteTitle, 480, "Bags & Accessories"),
   ];
 }
 

@@ -3,6 +3,7 @@ import { t } from "../lib/i18n";
 import { searchListings, getLastSource } from "../lib/api";
 import { Spinner } from "./ui";
 import ProductImage from "./ProductImage";
+import { categoryFor } from "../lib/productImage";
 
 // The buyer half of the story: an artisan publishes, then anyone on the ONDC
 // network can search and find that exact item. Deliberately dressed as a
@@ -12,11 +13,16 @@ import ProductImage from "./ProductImage";
 function BuyerCard({ row, lang }) {
   const title = row.title?.[lang] || row.title?.en || "";
   const disabled = row._demo;
+  const cat = categoryFor(row);
 
   const card = (
     <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden active:scale-[0.98] transition shadow-sm">
-      <div className="aspect-square bg-slate-100 overflow-hidden">
+      <div className="relative aspect-square bg-slate-100 overflow-hidden">
         <ProductImage row={row} className="w-full h-full object-cover" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/50 to-transparent" />
+        <span className="absolute left-2 bottom-2 rounded-md bg-black/25 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wide backdrop-blur-[1px]">
+          {cat.label}
+        </span>
       </div>
       <div className="p-3">
         <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">{title}</p>

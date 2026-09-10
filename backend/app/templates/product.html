@@ -80,7 +80,7 @@
   <header>🧺 Karigar AI</header>
 
   {% if listing.image_b64 %}
-    <img class="photo" src="data:image/png;base64,{{ listing.image_b64 }}"
+    <img class="photo" src="data:{{ image_mime | default('image/png') }};base64,{{ listing.image_b64 }}"
          alt="{{ listing.title_en }}">
   {% else %}
     <div class="photo nophoto">No photo provided</div>
