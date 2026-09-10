@@ -10,7 +10,7 @@ import json
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from .models import Artisan, Listing
+from .models import Artisan, ChannelConnection, ChannelPublish, Listing
 
 
 def _get_or_create_artisan(session: Session, name: str, location: str) -> Artisan:
@@ -30,6 +30,81 @@ def _get_or_create_artisan(session: Session, name: str, location: str) -> Artisa
     return artisan
 
 
+# --- accounts (Phase 3) ----------------------------------------------------
+
+
+def get_artisan_by_uid(session: Session, uid: str) -> Artisan | None:
+    if not uid:
+        return None
+    return session.exec(select(Artisan).where(Artisan.uid == uid)).first()
+
+
+def upsert_artisan(session: Session, *, uid: str, **fields) -> Artisan:
+    """Create or update the account keyed by Firebase/demo uid.
+
+    Only non-empty incoming fields overwrite stored ones, so a partial update
+    (e.g. editing just the location) never blanks the name or photo.
+    """
+    artisan = get_artisan_by_uid(session, uid)
+    if artisan is None:
+        artisan = Artisan(uid=uid, name=(fields.get("name") or "Artisan"))
+        session.add(artisan)
+
+    for key in ("name", "location", "email", "phone", "photo_url", "plan"):
+        val = fields.get(key)
+        if val:
+            setattr(artisan, key, val)
+
+    session.commit()
+    session.refresh(artisan)
+    return artisan
+
+
+# --- channels (Phase 3) ----------------------------------------------------
+
+
+def set_channel_connection(session: Session, *, artisan_id: int, channel_id: str,
+                           connected: bool = True, mode: str = "demo") -> ChannelConnection:
+    row = session.exec(
+        select(ChannelConnection).where(
+            ChannelConnection.artisan_id == artisan_id,
+            ChannelConnection.channel_id == channel_id,
+        )
+    ).first()
+    if row is None:
+        row = ChannelConnection(artisan_id=artisan_id, channel_id=channel_id)
+        session.add(row)
+    row.connected = connected
+    row.mode = mode
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+def connected_channels(session: Session, artisan_id: int | None) -> set[str]:
+    if artisan_id is None:
+        return set()
+    rows = session.exec(
+        select(ChannelConnection).where(
+            ChannelConnection.artisan_id == artisan_id,
+            ChannelConnection.connected == True,  # noqa: E712
+        )
+    ).all()
+    return {r.channel_id for r in rows}
+
+
+def record_channel_publish(session: Session, *, listing_id: str, channel_id: str,
+                           status: str, mode: str, channel_ref: str) -> ChannelPublish:
+    row = ChannelPublish(
+        listing_id=listing_id, channel_id=channel_id,
+        status=status, mode=mode, channel_ref=channel_ref,
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
 def save_listing(
     session: Session,
     *,
@@ -39,8 +114,19 @@ def save_listing(
     image_b64: str | None,
     artisan_name: str,
     location: str,
+    artisan_uid: str | None = None,
+    artisan_email: str = "",
+    artisan_photo_url: str = "",
 ) -> Listing:
-    artisan = _get_or_create_artisan(session, artisan_name, location)
+    # A signed-in artisan (real uid) owns the listing; otherwise fall back to
+    # the name/location identity so anonymous/demo publishes still work.
+    if artisan_uid:
+        artisan = upsert_artisan(
+            session, uid=artisan_uid, name=artisan_name, location=location,
+            email=artisan_email, photo_url=artisan_photo_url,
+        )
+    else:
+        artisan = _get_or_create_artisan(session, artisan_name, location)
     title = listing.get("title") or {}
     desc = listing.get("description") or {}
 
@@ -116,3 +202,9 @@ def search_listings(session: Session, query: str, limit: int = 24) -> list[Listi
 
 def get_artisan(session: Session, artisan_id: int | None) -> Artisan | None:
     return session.get(Artisan, artisan_id) if artisan_id is not None else None
+
+
+def listing_count(session: Session, artisan_id: int | None) -> int:
+    if artisan_id is None:
+        return 0
+    return len(session.exec(select(Listing.id).where(Listing.artisan_id == artisan_id)).all())
