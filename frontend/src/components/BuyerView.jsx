@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
 import { searchListings, getLastSource } from "../lib/api";
 import { Spinner } from "./ui";
-import RemoteImage from "./RemoteImage";
+import ProductImage from "./ProductImage";
 
 // The buyer half of the story: an artisan publishes, then anyone on the ONDC
 // network can search and find that exact item. Deliberately dressed as a
@@ -15,17 +15,8 @@ function BuyerCard({ row, lang }) {
 
   const card = (
     <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden active:scale-[0.98] transition shadow-sm">
-      <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
-        {row.has_image && row.image_url ? (
-          <RemoteImage
-            src={row.image_url}
-            alt={title}
-            className="w-full h-full object-cover"
-            fallback={<span className="text-3xl opacity-40">🧺</span>}
-          />
-        ) : (
-          <span className="text-3xl opacity-40">🧺</span>
-        )}
+      <div className="aspect-square bg-slate-100 overflow-hidden">
+        <ProductImage row={row} className="w-full h-full object-cover" />
       </div>
       <div className="p-3">
         <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">{title}</p>

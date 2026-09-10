@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
 import { listListings } from "../lib/api";
 import { Spinner } from "./ui";
-import RemoteImage from "./RemoteImage";
+import ProductImage from "./ProductImage";
 
 // The artisan's catalogue. This is the screen that answers "is this a product
 // or a one-shot demo script?" — publish something, come back here, it's still
@@ -14,17 +14,8 @@ function ProductCard({ row, lang }) {
 
   const card = (
     <div className="card overflow-hidden active:scale-[0.98] transition">
-      <div className="aspect-square bg-clay-100 flex items-center justify-center overflow-hidden">
-        {row.has_image && row.image_url ? (
-          <RemoteImage
-            src={row.image_url}
-            alt={title}
-            className="w-full h-full object-cover"
-            fallback={<span className="text-3xl opacity-40">🧺</span>}
-          />
-        ) : (
-          <span className="text-3xl opacity-40">🧺</span>
-        )}
+      <div className="aspect-square bg-clay-100 overflow-hidden">
+        <ProductImage row={row} className="w-full h-full object-cover" />
       </div>
       <div className="p-3">
         <p className="text-sm font-semibold text-clay-900 leading-snug line-clamp-2">{title}</p>
