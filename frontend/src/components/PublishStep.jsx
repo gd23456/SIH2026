@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { publish, qrUrl, listChannels } from "../lib/api";
+import { publish, qrUrl, listChannels, openExternal } from "../lib/api";
 import { Spinner } from "./ui";
 import RemoteImage from "./RemoteImage";
 
@@ -156,10 +156,12 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
             return (
               <div key={r.channel_id} className="flex items-center justify-between gap-2 text-sm">
                 {linkable ? (
-                  <a href={r.storefront_url} target="_blank" rel="noreferrer"
-                     className="text-clay-800 font-medium underline decoration-clay-300 underline-offset-2 truncate">
+                  <button
+                    onClick={() => openExternal(r.storefront_url)}
+                    className="text-clay-800 font-medium underline decoration-clay-300 underline-offset-2 truncate text-left"
+                  >
                     ✅ {r.status} ↗
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-clay-800 truncate">✅ {r.status}</span>
                 )}
@@ -189,14 +191,14 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
             onFail={() => setQrOk(false)}
             className="mt-4 w-full max-w-[240px] aspect-square rounded-2xl border border-clay-100 bg-white"
           />
-          <a
-            href={res.storefront_url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 text-sm font-semibold text-clay-700 underline decoration-clay-300 underline-offset-4"
+          {/* The QR is for someone else's phone; this is how the artisan
+              opens their own live page without needing a second device. */}
+          <button
+            onClick={() => openExternal(res.storefront_url)}
+            className="btn-primary !mt-4"
           >
-            {t("openStorefront", lang)} ↗
-          </a>
+            {t("viewProduct", lang)} ↗
+          </button>
         </div>
       )}
 
