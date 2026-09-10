@@ -18,6 +18,7 @@ import base64
 import binascii
 import io
 import logging
+import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -201,6 +202,20 @@ def publish(
     # live storefront + QR. Every other selected channel is recorded as an
     # honest, clearly-labelled demo publish.
     selected = list(dict.fromkeys(["ondc", *(req.channels or [])]))
+
+    # Plan gating, enforced here rather than only in the UI. A client can send
+    # any channel list it likes, so "Pro" has to mean something server-side or
+    # it means nothing at all.
+    #
+    # What gets gated is deliberate: listing is ALWAYS free and always reaches
+    # ONDC. We charge for extra distribution, never for the artisan's ability to
+    # sell — charging someone to list their first product would kill the
+    # adoption this whole thing depends on.
+    artisan = repo.get_artisan_by_uid(session, req.artisan_uid) if req.artisan_uid else None
+    is_pro = (artisan.plan if artisan else "free") == "pro"
+    locked = [] if is_pro else [c for c in selected if c not in FREE_CHANNELS]
+    selected = [c for c in selected if c not in locked]
+
     results: list[ChannelResult] = []
     for cid in selected:
         ch = channels_service.get_channel(cid)
@@ -235,6 +250,7 @@ def publish(
         whatsapp_share_url=ondc_service.whatsapp_share(title, req.price, storefront),
         storefront_url=storefront,
         channel_results=results,
+        locked_channels=locked,
     )
 
 
@@ -254,6 +270,14 @@ def get_artisan_by_uid(uid: str, session: Session = Depends(get_session)):
     if artisan is None:
         raise HTTPException(404, "No such artisan")
     return _artisan_out(session, artisan)
+
+
+# Channels every artisan gets, on any plan, forever.
+#
+# ONDC is deliberately in here: it is the real one, the one with a live
+# storefront and a QR a buyer can scan. Selling at all is free. Pro buys wider
+# distribution — the extra marketplaces — not the right to exist.
+FREE_CHANNELS = frozenset({"ondc"})
 
 
 _BASELINE_METHOD = (
@@ -281,6 +305,7 @@ def list_channels(uid: str = "", session: Session = Depends(get_session)):
     """
     artisan = repo.get_artisan_by_uid(session, uid) if uid else None
     connected = repo.connected_channels(session, artisan.id if artisan else None)
+    is_pro = (artisan.plan if artisan else "free") == "pro"
     out: list[ChannelInfo] = []
     for c in channels_service.all_channels():
         cid = c["id"]
@@ -290,6 +315,9 @@ def list_channels(uid: str = "", session: Session = Depends(get_session)):
             configured=live_ready,
             connected=live_ready or cid in connected,
             mode="live" if live_ready else "demo",
+            # Mirrors the gate publish() enforces, so the UI shows a lock rather
+            # than a checkbox the backend would silently ignore.
+            requires_pro=not is_pro and cid not in FREE_CHANNELS,
         ))
     return out
 
@@ -427,17 +455,35 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
         except Exception:
             img_mime = "image/png"
 
+    artisan = repo.get_artisan(session, listing.artisan_id)
+
+    # The page had no way to actually buy anything. Until we are a registered
+    # ONDC BPP there is no in-network checkout, so we hand the buyer to the
+    # maker on WhatsApp rather than show a dead "Buy" button — addressed to the
+    # artisan's number when we have one, otherwise an open share.
+    order_text = (
+        f'Hi! I\'d like to order "{listing.title_en}" '
+        f"(₹{listing.price:,}) that I found on Karigar AI:\n"
+        f"{_base_url(request)}/p/{listing_id}"
+    )
+    phone = "".join(c for c in (artisan.phone or "") if c.isdigit()) if artisan else ""
+
     return templates.TemplateResponse(
         request=request,
         name="product.html",
         context={
             "listing": listing,
-            "artisan": repo.get_artisan(session, listing.artisan_id),
+            "artisan": artisan,
             "image_mime": img_mime,
             # Relative on purpose: the page is already being served from the
             # right origin, and an absolute URL would break if the page were
             # reached via a different host than the one that minted it.
             "qr_url": f"/api/qr/{listing_id}",
+            "wa_order_url": (
+                f"https://wa.me/{phone}?text={urllib.parse.quote(order_text)}"
+                if phone
+                else f"https://wa.me/?text={urllib.parse.quote(order_text)}"
+            ),
         },
     )
 

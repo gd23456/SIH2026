@@ -52,7 +52,23 @@ _MATCH_KEYWORDS: list[tuple[str, list[str]]] = [
     ("Jute Bags", ["jute", "tote", "sack", "burlap"]),
     ("Brassware & Metal Craft", ["brass", "bidri", "bidriware", "dhokra",
                                  "bronze", "metal", "bell metal"]),
+    # Ahead of jewellery and the generic wood catch: a carved wooden jewellery box
+    # is woodwork, not jewellery, and without this it was priced against a toy
+    # band (median Rs.640) or a jewellery band it does not belong in.
+    ("Carved Wood & Furniture", ["carved", "carving", "furniture", "chest", "sheesham",
+                                 "rosewood", "saharanpur", "walnut wood", "jewellery box"]),
+    ("Handmade Jewellery", ["jewellery", "jewelry", "necklace", "earring", "bangle",
+                            "pendant", "filigree", "meenakari", "kundan", "tarakasi"]),
+    ("Folk & Tribal Painting", ["painting", "madhubani", "mithila", "pattachitra",
+                                "warli", "kalamkari", "gond", "tanjore", "phad"]),
+    ("Carpets & Durries", ["carpet", "rug", "durrie", "dhurrie", "namda"]),
+    ("Embroidered Textiles", ["chikankari", "phulkari", "kantha", "kasuti", "zardozi",
+                              "embroidery", "embroidered", "shawl", "dupatta"]),
+    ("Leather Craft", ["leather", "kolhapuri", "chappal", "mojari", "jutti"]),
+    ("Stone & Marble Craft", ["marble", "soapstone", "stone carving", "inlay"]),
+    ("Papier-mache & Lacquerware", ["papier", "mache", "lacquerware"]),
     # Generic wood/handicraft catch that still finds a band before we fall back.
+    # Small plain wooden objects sit closer to the toy band than to furniture.
     ("Channapatna Wooden Toys", ["wood", "wooden"]),
 ]
 

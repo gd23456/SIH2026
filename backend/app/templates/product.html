@@ -40,6 +40,12 @@
         border:1px solid var(--green);border-radius:999px;padding:2px 9px}
   .gi{display:inline-block;font-size:12px;font-weight:600;color:var(--brand);
       border:1px solid var(--brand);border-radius:999px;padding:2px 9px;margin-top:8px}
+  .buybox{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+  .buy{display:flex;align-items:center;justify-content:center;gap:8px;
+       background:#25D366;color:#fff;font-weight:700;font-size:16px;
+       padding:14px 18px;border-radius:14px;text-decoration:none}
+  .buy.secondary{background:#fff;color:var(--brand);border:1.5px solid var(--brand)}
+  .buynote{font-size:12px;color:var(--muted);text-align:center;margin:2px 0 0}
   .gi-verified{display:inline-block;font-size:12px;font-weight:700;color:#fff;
       background:var(--green);border:1px solid var(--green);border-radius:999px;
       padding:3px 11px;margin-top:8px}
@@ -108,6 +114,19 @@
     {% elif listing.gi_candidate %}
       <span class="gi">🏷️ Possible GI: {{ listing.gi_candidate }}</span>
     {% endif %}
+
+    {#
+      Buying. Until we are a registered ONDC BPP there is no in-network
+      checkout, so the honest move is to put the buyer in touch with the maker
+      directly rather than show a "Buy" button that goes nowhere.
+    #}
+    <div class="buybox">
+      <a class="buy" href="{{ wa_order_url }}" target="_blank" rel="noopener">💬 Order on WhatsApp</a>
+      {% if artisan and artisan.phone %}
+        <a class="buy secondary" href="tel:{{ artisan.phone }}">📞 Call the artisan</a>
+      {% endif %}
+      <p class="buynote">You buy straight from the maker — no middleman taking a cut.</p>
+    </div>
 
     {% if listing.description_en %}<p class="desc" data-lang="en">{{ listing.description_en }}</p>{% endif %}
     {% if listing.description_hi %}<p class="desc" data-lang="hi" hidden>{{ listing.description_hi }}</p>{% endif %}

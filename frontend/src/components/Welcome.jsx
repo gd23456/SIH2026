@@ -11,16 +11,16 @@ export default function Welcome({ lang, setLang, account, onStart, onMyProducts,
         </div>
       )}
       <div className="flex-1 flex flex-col items-center justify-center text-center fade-in py-6">
-        <div className="h-20 w-20 rounded-3xl bg-clay-600 shadow-soft flex items-center justify-center mb-5">
-          <svg viewBox="0 0 512 512" className="h-14 w-14">
-            <g fill="none" stroke="#faf6f0" strokeWidth="30" strokeLinecap="round">
-              <path d="M176 128 V384" />
-              <path d="M176 256 L336 128" />
-              <path d="M176 256 L336 384" />
-            </g>
-            <circle cx="336" cy="128" r="22" fill="#e8a13a" />
-          </svg>
-        </div>
+        {/* The real logo mark, same asset as the launcher icon. Served from
+            /public so it is bundled into the APK — no network request, which
+            matters on a demo hotspot with no internet. */}
+        <img
+          src="/icon-512.png"
+          alt=""
+          width={80}
+          height={80}
+          className="h-20 w-20 rounded-3xl shadow-soft mb-5"
+        />
         <h1 className="text-3xl font-extrabold text-clay-900">{t("appName", lang)}</h1>
         <p className="mt-3 text-clay-700 text-lg leading-snug max-w-xs">{t("tagline", lang)}</p>
       </div>

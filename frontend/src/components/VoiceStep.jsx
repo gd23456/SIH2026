@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { LANGS, t } from "../lib/i18n";
-import { startListening, speechSupported } from "../lib/speech";
+import { startListening, speechSupported, supportedLanguages } from "../lib/speech";
 import { generateListing, getLastSource } from "../lib/api";
 import { Spinner } from "./ui";
 
@@ -9,10 +9,42 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
   const [transcript, setTranscript] = useState("");
   const [busy, setBusy] = useState(false);
   const [supported] = useState(() => !!speechSupported());
+  const [micError, setMicError] = useState(null); // i18n key or null
+  const [langMissing, setLangMissing] = useState(false);
   const ctrlRef = useRef(null);
   const speechCode = LANGS.find((l) => l.code === lang)?.speech || "en-IN";
 
   useEffect(() => () => ctrlRef.current?.stop?.(), []);
+
+  // Warn ahead of time when this phone has no voice pack for the chosen
+  // language. Android 13+ refuses to answer the query at all, so an empty
+  // list means "unknown" and must NOT be treated as unsupported.
+  useEffect(() => {
+    let alive = true;
+    setLangMissing(false);
+    setMicError(null);
+    supportedLanguages().then((list) => {
+      if (!alive || list.length === 0) return;
+      const base = speechCode.split("-")[0].toLowerCase();
+      const ok = list.some((l) => l.toLowerCase().startsWith(base));
+      setLangMissing(!ok);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [speechCode]);
+
+  /** Map a recogniser error onto something the artisan can act on. */
+  function explain(err) {
+    const e = String(err || "").toLowerCase();
+    if (e.includes("permission")) return "micDenied";
+    // Android surfaces a missing voice pack as ERROR_LANGUAGE_NOT_SUPPORTED /
+    // ERROR_LANGUAGE_UNAVAILABLE, and some ROMs just say "not available".
+    if (e.includes("language") || e.includes("unavailable") || e.includes("not supported")) {
+      return "micLangMissing";
+    }
+    return "micGeneric";
+  }
 
   async function toggleMic() {
     if (listening) {
@@ -20,15 +52,22 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
       setListening(false);
       return;
     }
-    setTranscript("");
+    setMicError(null);
+    // Keep whatever is already in the box and append to it, rather than
+    // wiping a transcript the artisan has already typed or dictated.
+    const existing = transcript.trim();
     setListening(true);
     ctrlRef.current = await startListening(speechCode, {
-      onPartial: (text) => setTranscript(text),
+      onPartial: (text) => setTranscript([existing, text].filter(Boolean).join(" ")),
       onFinal: (text) => {
-        if (text) setTranscript(text);
+        const merged = [existing, text].filter(Boolean).join(" ").trim();
+        if (merged) setTranscript(merged);
         setListening(false);
       },
-      onError: () => setListening(false),
+      onError: (err) => {
+        setMicError(explain(err));
+        setListening(false);
+      },
     });
   }
 
@@ -86,9 +125,20 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
             </span>
           </button>
         )}
-        <p className="text-clay-600 font-medium">
+        <p className="text-clay-600 font-medium text-center">
           {listening ? t("listening", lang) : supported ? t("tapMic", lang) : t("orType", lang)}
         </p>
+        {listening && (
+          <p className="text-clay-400 text-xs text-center -mt-4">
+            {t("micKeepTalking", lang)} · {t("micStop", lang)}
+          </p>
+        )}
+
+        {(micError || langMissing) && !listening && (
+          <p className="text-sm text-clay-700 bg-haldi/15 border border-haldi/40 rounded-2xl px-4 py-3 text-center -mt-2">
+            {t(micError || "micLangMissing", lang)}
+          </p>
+        )}
 
         <div className="w-full">
           <textarea

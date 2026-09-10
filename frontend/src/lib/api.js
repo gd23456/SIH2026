@@ -45,6 +45,21 @@ export function isNativeApp() {
 }
 
 /**
+ * Open a URL outside the app.
+ *
+ * `target="_blank"` looks like it works and doesn't: Capacitor's WebView is
+ * created with multiple-window support disabled, so on a device the tap is
+ * silently swallowed and the storefront never opens. Navigating the current
+ * frame to a foreign origin IS handled — Capacitor intercepts it and hands the
+ * URL to the system browser, leaving the app running behind it.
+ */
+export function openExternal(url) {
+  if (!url) return;
+  if (isNative()) window.location.href = url;
+  else window.open(url, "_blank", "noopener");
+}
+
+/**
  * Probe a backend without falling back to demo data.
  *
  * Every other call in this file silently degrades to canned data, which is
@@ -82,6 +97,14 @@ export const getLastSource = () => _lastSource;
 // The backend sets X-Karigar-Mode: live|mock so we can tell whether real Gemini
 // answered even when the backend itself is reachable. jfetch captures it here.
 let _lastBackendMode = null;
+
+// Cheap calls (health, listings, channels) answer in well under a second, so
+// 12s is generous for them. The AI endpoints are a different story — measured
+// against live Gemini, generate-listing took 27s and price took 25s. At the old
+// shared 12s ceiling those calls were aborted mid-flight and silently fell back
+// to canned data, which looked exactly like "the AI is broken" even with a
+// valid key. Slow is fine here; wrong is not.
+const AI_TIMEOUT_MS = 45000;
 
 async function jfetch(path, opts = {}, timeoutMs = 12000) {
   const ctrl = new AbortController();
@@ -149,7 +172,7 @@ export async function enhanceImage(file) {
   try {
     const fd = new FormData();
     fd.append("file", upload);
-    const data = await jfetch("/api/enhance-image", { method: "POST", body: fd }, 25000);
+    const data = await jfetch("/api/enhance-image", { method: "POST", body: fd }, AI_TIMEOUT_MS);
     _lastSource = "live";
     return data;
   } catch (e) {
@@ -175,7 +198,7 @@ export async function generateListing({ transcript, language, image_b64 }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript, language, image_b64 }),
-    });
+    }, AI_TIMEOUT_MS);
     // Honest badge: "AI" only when real Gemini answered, else the mock ran.
     _lastSource = _lastBackendMode === "mock" ? "demo" : "live";
     return data;
@@ -202,7 +225,7 @@ export async function getPrice(listing) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    }, AI_TIMEOUT_MS);
     _lastSource = _lastBackendMode === "mock" ? "demo" : "live";
     return data;
   } catch {

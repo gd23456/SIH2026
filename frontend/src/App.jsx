@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Welcome from "./components/Welcome";
 import AuthScreen from "./components/AuthScreen";
 import PhotoStep from "./components/PhotoStep";
@@ -12,7 +12,8 @@ import Profile from "./components/Profile";
 import Plans from "./components/Plans";
 import Privacy from "./components/Privacy";
 import ConnectSheet from "./components/ConnectSheet";
-import { Header, Stepper } from "./components/ui";
+import { Header, Stepper, ConfirmSheet } from "./components/ui";
+import { t } from "./lib/i18n";
 import { loadStoredAccount } from "./lib/auth";
 import { upsertArtisan } from "./lib/api";
 
@@ -27,6 +28,7 @@ export default function App() {
   const [view, setView] = useState("flow"); // flow | products | buyer | auth | profile | plans | privacy
   const [showConnect, setShowConnect] = useState(false);
   const [account, setAccount] = useState(() => loadStoredAccount());
+  const [confirmExit, setConfirmExit] = useState(false);
 
   function reset() {
     setStep(1);
@@ -61,8 +63,82 @@ export default function App() {
     setView("flow");
   }
 
-  const canBack = step > 1 && step < 5;
-  const back = () => setStep((s) => Math.max(1, s - 1));
+  // Step 1 goes back to Welcome rather than nowhere; step 5 is a finished
+  // listing, so its "back" is the home button instead.
+  // Reset the scroll container on every step/view change. It is one persistent
+  // scrolling div, so after scrolling down a long step (the review listing, say)
+  // the NEXT step opened already scrolled to its bottom — which on the price
+  // step is empty space, and reads as a screen that failed to load.
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [step, view]);
+
+  const canBack = step >= 1 && step < 5;
+  const back = () => (step === 1 ? goHome() : setStep((s) => Math.max(1, s - 1)));
+
+  /** Leave the 5-step flow. Confirms first if there is unsaved work. */
+  function goHome() {
+    // Nothing entered yet, or already published — no need to ask.
+    if (step === 5 || (!imageB64 && !listing)) {
+      setStep(0);
+      setView("flow");
+      return;
+    }
+    setConfirmExit(true);
+  }
+
+  function discardAndGoHome() {
+    setConfirmExit(false);
+    setStep(0);
+    setImageB64(null);
+    setTranscript("");
+    setListing(null);
+    setPrice(0);
+    setView("flow");
+  }
+
+  // Android hardware back.
+  //
+  // Capacitor's default when nothing handles `backButton` is to exit the app,
+  // so pressing back anywhere — halfway through a listing, inside Profile,
+  // with the Connection sheet open — closed Karigar outright and lost the work.
+  // This walks one level up the UI instead, and only leaves the app from the
+  // welcome screen, which is what Android users expect.
+  //
+  // The handler is kept in a ref so the listener can be registered once while
+  // still seeing current state; re-registering on every state change races with
+  // the plugin's async addListener and can drop or double-fire presses.
+  const backHandler = useRef(() => {});
+  backHandler.current = () => {
+    if (showConnect) return setShowConnect(false);
+    if (view === "plans" || view === "privacy") return setView("profile");
+    if (view !== "flow") return setView("flow"); // products / buyer / profile / auth
+    if (step > 1 && step < 5) return back();
+    if (step > 0) return setStep(0); // step 1 or the published screen → welcome
+    return null; // already at welcome: fall through to exit
+  };
+
+  useEffect(() => {
+    let remove = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { App: CapApp } = await import("@capacitor/app");
+        const handle = await CapApp.addListener("backButton", () => {
+          if (backHandler.current() === null) CapApp.exitApp();
+        });
+        if (cancelled) handle.remove();
+        else remove = () => handle.remove();
+      } catch {
+        // Web build (or plugin unavailable): browsers have their own back.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      remove?.();
+    };
+  }, []);
 
   return (
     // Phone frame: fills screen on mobile, centered card on desktop
@@ -74,6 +150,7 @@ export default function App() {
               step={step}
               lang={lang}
               onBack={canBack ? back : null}
+              onHome={goHome}
               sourceBadge={source}
               account={account}
               onProfile={() => setView("profile")}
@@ -82,7 +159,7 @@ export default function App() {
           </>
         )}
 
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {view === "auth" && <AuthScreen lang={lang} onDone={onSignedIn} />}
 
           {view === "buyer" && <BuyerView lang={lang} onBack={() => setView("flow")} />}
@@ -178,11 +255,23 @@ export default function App() {
               onReset={reset}
               onMyProducts={() => setView("products")}
               onBuyerView={() => setView("buyer")}
+              onPlans={() => setView("plans")}
             />
           )}
         </div>
 
         {showConnect && <ConnectSheet lang={lang} onClose={() => setShowConnect(false)} />}
+
+        {confirmExit && (
+          <ConfirmSheet
+            title={t("exitFlow", lang)}
+            body={t("exitFlowSub", lang)}
+            cancelLabel={t("stay", lang)}
+            confirmLabel={t("leave", lang)}
+            onCancel={() => setConfirmExit(false)}
+            onConfirm={discardAndGoHome}
+          />
+        )}
       </div>
     </div>
   );

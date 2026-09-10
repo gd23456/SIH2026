@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { publish, qrUrl, listChannels } from "../lib/api";
-import { Spinner } from "./ui";
+import { publish, qrUrl, listChannels, openExternal } from "../lib/api";
+import { Spinner, ConfirmSheet } from "./ui";
 import RemoteImage from "./RemoteImage";
 
 // Publish once, reach every channel. ONDC is the one real channel (live
 // storefront + QR); the rest are honestly-labelled demo publishes. The artisan
 // picks channels, then sees a per-channel result list.
 
-export default function PublishStep({ lang, listing, price, imageB64, account, onReset, onMyProducts, onBuyerView }) {
+export default function PublishStep({ lang, listing, price, imageB64, account, onReset, onMyProducts, onBuyerView, onPlans }) {
   const [phase, setPhase] = useState("select"); // select | publishing | done
   const [channels, setChannels] = useState(null);
   const [selected, setSelected] = useState(() => new Set(["ondc"]));
   const [res, setRes] = useState(null);
   const [showJson, setShowJson] = useState(false);
   const [qrOk, setQrOk] = useState(true);
+  const [upsell, setUpsell] = useState(null); // channel id the artisan reached for
 
   useEffect(() => {
     let alive = true;
@@ -23,8 +24,15 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
       if (!alive) return;
       const list = Array.isArray(chs) ? chs : [];
       setChannels(list);
-      // Pre-select ONDC + any already-connected channels.
-      setSelected(new Set(["ondc", ...list.filter((c) => c.connected).map((c) => c.id)]));
+      // Pre-select ONDC + any already-connected channel the plan actually
+      // covers. Pre-ticking a locked one would promise a publish that the
+      // backend then refuses.
+      setSelected(
+        new Set([
+          "ondc",
+          ...list.filter((c) => c.connected && !c.requires_pro).map((c) => c.id),
+        ]),
+      );
     })();
     return () => {
       alive = false;
@@ -33,6 +41,11 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
 
   function toggle(id) {
     if (id === "ondc") return; // ONDC is locked on — the real channel
+    // Tapping a Pro channel on the Free plan is the honest moment to ask: the
+    // artisan has just told us they want that reach. Show the offer instead of
+    // silently ticking a box publish() would drop.
+    const ch = channels?.find((c) => c.id === id);
+    if (ch?.requires_pro) return setUpsell(id);
     setSelected((s) => {
       const next = new Set(s);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -73,30 +86,41 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
           ) : (
             channels.map((ch) => {
               const on = selected.has(ch.id);
-              const locked = ch.id === "ondc";
+              const alwaysOn = ch.id === "ondc"; // the real channel, never optional
+              const pro = ch.requires_pro;
               return (
                 <button
                   key={ch.id}
                   onClick={() => toggle(ch.id)}
-                  disabled={locked}
+                  disabled={alwaysOn}
                   className="w-full flex items-center gap-3 px-2 py-3 text-left"
                 >
-                  <span className="text-xl w-7 text-center">{ch.logo}</span>
+                  <span className={`text-xl w-7 text-center ${pro ? "opacity-50" : ""}`}>{ch.logo}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-clay-900">{ch.name}</p>
-                    {ch.mode === "live" ? (
+                    <p className={`text-sm font-semibold ${pro ? "text-clay-500" : "text-clay-900"}`}>
+                      {ch.name}
+                    </p>
+                    {pro ? (
+                      <span className="text-[10px] font-bold text-clay-500">{t("proOnly", lang)}</span>
+                    ) : ch.mode === "live" ? (
                       <span className="text-[10px] font-bold text-leaf">● {t("liveChannel", lang)}</span>
                     ) : (
                       <span className="text-[10px] text-clay-400">{t("demoConnection", lang)}</span>
                     )}
                   </div>
-                  <span
-                    className={`w-6 h-6 rounded-md flex items-center justify-center text-white text-sm ${
-                      on ? "bg-clay-600" : "bg-clay-100"
-                    } ${locked ? "opacity-90" : ""}`}
-                  >
-                    {on ? "✓" : ""}
-                  </span>
+                  {pro ? (
+                    <span className="chip !bg-haldi/20 !text-clay-700 !py-0.5 text-[10px] shrink-0">
+                      🔒 Pro
+                    </span>
+                  ) : (
+                    <span
+                      className={`w-6 h-6 rounded-md flex items-center justify-center text-white text-sm ${
+                        on ? "bg-clay-600" : "bg-clay-100"
+                      } ${alwaysOn ? "opacity-90" : ""}`}
+                    >
+                      {on ? "✓" : ""}
+                    </span>
+                  )}
                 </button>
               );
             })
@@ -106,6 +130,20 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
         <button className="btn-primary mt-6" onClick={doPublish}>
           {t("publish", lang)} 🚀
         </button>
+
+        {upsell && (
+          <ConfirmSheet
+            title={t("proUpsellTitle", lang)}
+            body={t("proUpsellBody", lang)}
+            cancelLabel={t("notNow", lang)}
+            confirmLabel={t("seePlans", lang)}
+            onCancel={() => setUpsell(null)}
+            onConfirm={() => {
+              setUpsell(null);
+              onPlans?.();
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -156,10 +194,12 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
             return (
               <div key={r.channel_id} className="flex items-center justify-between gap-2 text-sm">
                 {linkable ? (
-                  <a href={r.storefront_url} target="_blank" rel="noreferrer"
-                     className="text-clay-800 font-medium underline decoration-clay-300 underline-offset-2 truncate">
+                  <button
+                    onClick={() => openExternal(r.storefront_url)}
+                    className="text-clay-800 font-medium underline decoration-clay-300 underline-offset-2 truncate text-left"
+                  >
                     ✅ {r.status} ↗
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-clay-800 truncate">✅ {r.status}</span>
                 )}
@@ -172,6 +212,27 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
             );
           })}
         </div>
+
+        {/* Channels the plan didn't cover. Shown after the success, not instead
+            of it — the publish did work, this is only what more would buy. */}
+        {(res.locked_channels || []).length > 0 && (
+          <div className="mt-3 pt-3 border-t border-clay-100">
+            <p className="text-xs text-clay-500">
+              🔒 {t("proLockedAfterPublish", lang)}{" "}
+              <span className="font-semibold text-clay-700">
+                {res.locked_channels
+                  .map((id) => channels?.find((c) => c.id === id)?.name || id)
+                  .join(", ")}
+              </span>
+            </p>
+            <button
+              onClick={() => onPlans?.()}
+              className="mt-2 text-xs font-bold text-clay-700 underline decoration-clay-300 underline-offset-4"
+            >
+              {t("seePlans", lang)} →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ONDC QR + storefront */}
@@ -189,14 +250,14 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
             onFail={() => setQrOk(false)}
             className="mt-4 w-full max-w-[240px] aspect-square rounded-2xl border border-clay-100 bg-white"
           />
-          <a
-            href={res.storefront_url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 text-sm font-semibold text-clay-700 underline decoration-clay-300 underline-offset-4"
+          {/* The QR is for someone else's phone; this is how the artisan
+              opens their own live page without needing a second device. */}
+          <button
+            onClick={() => openExternal(res.storefront_url)}
+            className="btn-primary !mt-4"
           >
-            {t("openStorefront", lang)} ↗
-          </a>
+            {t("viewProduct", lang)} ↗
+          </button>
         </div>
       )}
 

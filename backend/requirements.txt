@@ -22,7 +22,11 @@ pydantic>=2.9,<3
 pydantic-settings>=2.5,<3
 
 # --- imaging (pure wheels, always available) ---
-pillow>=10.4,<12
+# Ceiling is <13, not <12, so this stays satisfiable alongside requirements-ai.txt:
+# rembg 2.0.84 requires pillow>=12.1. With <12 the two files were mutually
+# exclusive, pip warned on every install, and which version you ended up with
+# depended on the order you installed them in.
+pillow>=10.4,<13
 
 # --- config ---
 python-dotenv>=1.0,<2

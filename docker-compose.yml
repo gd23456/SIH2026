@@ -21,13 +21,16 @@ services:
       GEMINI_MODEL: "${GEMINI_MODEL:-gemini-2.5-flash}"
       FORCE_MOCK: "${FORCE_MOCK:-0}"
       CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+      # rembg now caches to ~/.rembg/models by default; U2NET_HOME redirects it
+      # back to the path the u2net-cache volume below actually mounts.
+      U2NET_HOME: "/root/.u2net"
     env_file:
       - path: ./backend/.env
         required: false
     volumes:
       # Live reload while editing
       - ./backend/app:/app/app:ro
-      # Persist rembg model weights so you download the 180MB once
+      # Persist rembg model weights so you download the ~180MB once
       - u2net-cache:/root/.u2net
     restart: unless-stopped
 

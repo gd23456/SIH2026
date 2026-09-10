@@ -5,14 +5,18 @@ import { upsertArtisan } from "../lib/api";
 // Free vs Karigar Pro. Upgrade sets the plan flag (no real charge) — live
 // Google Play Billing is a post-hackathon step, stated honestly here.
 
+// Free covers everything an artisan needs to actually sell. Listing is never
+// capped — charging someone to list their first product would kill adoption,
+// which is exactly the answer we give judges. Pro buys reach, not permission.
 const FREE = [
+  "Unlimited listings — always free",
   "AI listings in 9 languages",
   "Grounded fair-price + GI verification",
   "Publish to ONDC + QR storefront",
 ];
 const PRO = [
-  "Unlimited AI listings",
   "Publish to every channel at once",
+  "Meesho, Myntra, Amazon Karigar, Flipkart Samarth, WhatsApp",
   "Priority pricing insights + market trends",
   "Sales analytics dashboard",
   "Priority support",

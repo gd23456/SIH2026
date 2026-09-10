@@ -69,8 +69,17 @@ export default function AuthScreen({ lang, onDone }) {
   return (
     <div className="flex flex-col min-h-full px-6 pt-12 pb-10 safe-top safe-bottom fade-in">
       <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="h-16 w-16 rounded-2xl bg-clay-600 shadow-soft flex items-center justify-center mb-5 text-3xl">
-          🧺
+        {/* Same K mark as the launcher icon and the welcome screen — the
+            sign-in screen was the one place still showing a basket emoji. */}
+        <div className="h-16 w-16 rounded-2xl bg-clay-600 shadow-soft flex items-center justify-center mb-5">
+          <svg viewBox="0 0 512 512" className="h-11 w-11">
+            <g fill="none" stroke="#faf6f0" strokeWidth="30" strokeLinecap="round">
+              <path d="M176 128 V384" />
+              <path d="M176 256 L336 128" />
+              <path d="M176 256 L336 384" />
+            </g>
+            <circle cx="336" cy="128" r="22" fill="#e8a13a" />
+          </svg>
         </div>
         <h1 className="text-2xl font-extrabold text-clay-900">{t("signIn", lang)}</h1>
         <p className="mt-2 text-clay-600 text-sm max-w-xs">{t("signInSub", lang)}</p>
@@ -78,6 +87,19 @@ export default function AuthScreen({ lang, onDone }) {
 
       <div className="space-y-3">
         {err && <p className="text-center text-sm text-red-600">{err}</p>}
+
+        {/*
+          Without VITE_FIREBASE_* the Google and phone buttons quietly created a
+          local demo account — they looked like real sign-in, never contacted
+          Google, and dropped you on the demo screen. The fallback is deliberate
+          stage insurance, but it has to announce itself rather than imply an
+          authentication that never happened.
+        */}
+        {!configured && (
+          <div className="rounded-2xl bg-haldi/15 px-4 py-3 text-[13px] text-clay-800">
+            {t("authDemoNotice", lang)}
+          </div>
+        )}
 
         {mode === "choose" && (
           <>

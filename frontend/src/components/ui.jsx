@@ -48,17 +48,33 @@ export function Avatar({ account, size = 32, onClick, className = "" }) {
   );
 }
 
-export function Header({ step, lang, onBack, sourceBadge, account, onProfile }) {
+export function Header({ step, lang, onBack, onHome, sourceBadge, account, onProfile }) {
   return (
     <div className="safe-top px-5 pt-3">
       <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={onBack}
-          className={`text-clay-700 text-sm font-medium ${onBack ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        >
-          ← {t("back", lang)}
-        </button>
-        <span className="text-xs font-semibold tracking-wide text-clay-500">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {/* Always reachable. The 5-step flow used to be a trap: step 1 had no
+              back, step 5 had none either, so the only way out of a listing you
+              did not want to finish was to kill the app. */}
+          {onHome && (
+            <button
+              onClick={onHome}
+              className="text-clay-500 text-base leading-none px-1.5 py-1 rounded-lg active:scale-90 transition"
+              aria-label={t("home", lang)}
+            >
+              ⌂
+            </button>
+          )}
+          <button
+            onClick={onBack}
+            className={`text-clay-700 text-sm font-medium truncate ${
+              onBack ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+          >
+            ← {t("back", lang)}
+          </button>
+        </div>
+        <span className="text-xs font-semibold tracking-wide text-clay-500 shrink-0">
           {t("step", lang)} {step} / 5
         </span>
         <div className="flex items-center gap-2">
@@ -68,6 +84,24 @@ export function Header({ step, lang, onBack, sourceBadge, account, onProfile }) 
             <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[11px]">● AI</span>
           ) : null}
           {onProfile && <Avatar account={account} size={30} onClick={onProfile} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Small centred confirm sheet — used before discarding an in-progress listing. */
+export function ConfirmSheet({ title, body, confirmLabel, cancelLabel, onConfirm, onCancel }) {
+  return (
+    <div className="absolute inset-0 z-30 flex items-end sm:items-center justify-center bg-black/40 fade-in"
+         onClick={onCancel}>
+      <div className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-6 m-0 sm:m-4"
+           onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-clay-900">{title}</h3>
+        {body && <p className="text-clay-600 text-sm mt-2">{body}</p>}
+        <div className="grid grid-cols-2 gap-3 mt-6">
+          <button className="btn-ghost !mt-0" onClick={onCancel}>{cancelLabel}</button>
+          <button className="btn-primary !mt-0" onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </div>

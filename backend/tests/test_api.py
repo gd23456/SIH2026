@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import base64
 import io
+import re
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -188,6 +190,65 @@ def test_generate_listing_omitting_transcript_is_allowed():
     r = client.post("/api/generate-listing", json={"language": "en"})
     assert r.status_code == 200
     assert r.json()["title"]["en"]
+
+
+# Script block each language must actually be written in. Marathi shares
+# Devanagari with Hindi, which is correct - it is the same script.
+_SCRIPTS = {
+    "hi": (0x0900, 0x097F), "mr": (0x0900, 0x097F), "bn": (0x0980, 0x09FF),
+    "gu": (0x0A80, 0x0AFF), "or": (0x0B00, 0x0B7F), "ta": (0x0B80, 0x0BFF),
+    "te": (0x0C00, 0x0C7F), "kn": (0x0C80, 0x0CFF),
+}
+
+
+def _script_vs_latin(text: str, lo: int, hi: int) -> tuple[int, int]:
+    """(chars in the target script, ASCII letters) - for "is this really Tamil?"."""
+    target = sum(1 for ch in text if lo <= ord(ch) <= hi)
+    latin = sum(1 for ch in text if ch.isascii() and ch.isalpha())
+    return target, latin
+
+
+@pytest.mark.parametrize("lang", sorted(_SCRIPTS))
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "handmade bamboo basket",
+        "clay terracotta vase",
+        "mysore silk saree",
+        "channapatna wooden toy",
+        "some craft we have never seen before",  # falls through to the default
+    ],
+)
+def test_generate_listing_is_actually_translated(transcript, lang):
+    """Every language must be real text in its own script, not English relabelled.
+
+    Mock mode is the stage fallback, and "a listing in nine languages at once"
+    is the claim being made while this screen is on the projector. A non-empty
+    check is not enough: the previous implementation regex-swapped ~17 English
+    words per language, which left every description byte-identical to English
+    and still passed a non-empty assertion.
+    """
+    r = client.post(
+        "/api/generate-listing",
+        json={"transcript": transcript, "language": lang},
+    )
+    assert r.status_code == 200
+    listing = r.json()
+    lo, hi = _SCRIPTS[lang]
+
+    for field in ("title", "description"):
+        assert lang in listing[field], f"{field} missing {lang}"
+        en = listing[field]["en"]
+        got = listing[field][lang]
+
+        assert got != en, f"{field}.{lang} is identical to English"
+
+        # Not merely "contains one translated word" - the target script has to
+        # outweigh the Latin text, or it is English with a few nouns swapped.
+        script, latin = _script_vs_latin(got, lo, hi)
+        assert script > latin, (
+            f"{field}.{lang} is mostly Latin ({script} in-script vs {latin} ASCII)"
+        )
 
 
 # --- fair price -----------------------------------------------------------
@@ -463,10 +524,32 @@ def test_published_listing_survives_and_renders():
     assert "Natural Bamboo" in page
     assert body["listing_id"] in page
 
-    # No external requests: the demo phone is on a hotspot with no internet.
+    # No external requests while RENDERING: the demo phone is on a hotspot with
+    # no internet, so nothing the page needs to paint may be fetched remotely.
+    #
+    # Anchor hrefs are deliberately exempt: an <a> is only followed when the
+    # buyer taps it, so the "Order on WhatsApp" link costs nothing offline. We
+    # check the tags that actually issue a request instead of every href.
     for scheme in ("http://", "https://"):
         assert f'src="{scheme}' not in page
-        assert f'href="{scheme}' not in page
+    for tag in re.findall(r"<(?:link|script|img|iframe)\b[^>]*>", page, re.I):
+        assert "http://" not in tag and "https://" not in tag, f"remote resource: {tag}"
+
+
+def test_storefront_offers_a_way_to_actually_buy():
+    """A published product a buyer can look at but not act on is a dead end.
+
+    Until ONDC BPP registration there is no in-network checkout, so the page
+    must at least hand the buyer to the maker with the product prefilled.
+    """
+    body = _publish()
+    page = client.get(f"/p/{body['listing_id']}").text
+
+    assert "wa.me" in page, "storefront must offer a way to order"
+    # the order message has to carry what is being ordered, and from where
+    assert "Order on WhatsApp" in page
+    assert quote(LISTING_FIXTURE["title"]["en"]) in page or LISTING_FIXTURE["title"]["en"] in page
+    assert quote(body["listing_id"]) in page or body["listing_id"] in page
 
 
 def test_storefront_has_language_switcher_not_stacked_descriptions():
@@ -660,10 +743,17 @@ def test_connect_unknown_channel_404s():
 
 
 def test_publish_to_multiple_channels():
-    """ONDC is really published (storefront URL); Meesho is a recorded demo."""
+    """ONDC is really published (storefront URL); Meesho is a recorded demo.
+
+    Uses a Pro artisan: extra channels are a paid feature, so a Free publish
+    would legitimately drop Meesho. That gate has its own tests below.
+    """
+    client.post("/api/artisan", json={"uid": "multi-chan", "name": "Lakshmi"})
+    client.post("/api/artisan", json={"uid": "multi-chan", "plan": "pro"})
     r = client.post("/api/publish", json={
         "listing": LISTING_FIXTURE, "price": 749,
         "artisan_name": "Lakshmi", "location": "Bengaluru",
+        "artisan_uid": "multi-chan",
         "channels": ["ondc", "meesho"],
     })
     assert r.status_code == 200
@@ -719,6 +809,10 @@ def test_storefront_view_increments_the_counter():
 
 def test_impact_sums_uplift_and_reach():
     uid = "uid-impact-2"
+    # Pro, so the second channel is genuinely reached and there is something to
+    # aggregate — otherwise this silently becomes a test of the plan gate.
+    client.post("/api/artisan", json={"uid": uid, "name": "Nadia"})
+    client.post("/api/artisan", json={"uid": uid, "plan": "pro"})
     client.post("/api/publish", json={
         "listing": LISTING_FIXTURE, "price": 1000, "artisan_uid": uid,
         "artisan_name": "Nadia", "location": "Kutch", "channels": ["ondc", "meesho"],
@@ -742,3 +836,65 @@ def test_impact_unknown_artisan_is_zeroed_not_error():
         "total_scans": 0, "fair_value_uplift": 0, "currency": "INR",
         "baseline_method": imp["baseline_method"],
     }
+
+
+# --- plan gating -----------------------------------------------------------
+
+
+def test_free_plan_publishes_to_ondc_only():
+    """Free must still publish — listing is never gated, only extra reach is.
+
+    The gate lives in the endpoint, not the UI: a client can send any channel
+    list it likes, so "Pro" has to mean something server-side.
+    """
+    client.post("/api/artisan", json={"uid": "freeuser", "name": "Free Artisan"})
+    r = client.post(
+        "/api/publish",
+        json={
+            "listing": LISTING_FIXTURE,
+            "price": 749,
+            "artisan_uid": "freeuser",
+            "channels": ["ondc", "meesho", "myntra", "whatsapp"],
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+
+    published = [c["channel_id"] for c in body["channel_results"]]
+    assert published == ["ondc"], "free plan must still reach ONDC"
+    assert set(body["locked_channels"]) == {"meesho", "myntra", "whatsapp"}
+    # the publish itself succeeded — a locked channel is not a failure
+    assert body["status"] == "PUBLISHED"
+    assert body["storefront_url"]
+
+
+def test_pro_plan_unlocks_every_channel():
+    client.post("/api/artisan", json={"uid": "prouser", "name": "Pro Artisan"})
+    client.post("/api/artisan", json={"uid": "prouser", "plan": "pro"})
+    r = client.post(
+        "/api/publish",
+        json={
+            "listing": LISTING_FIXTURE,
+            "price": 749,
+            "artisan_uid": "prouser",
+            "channels": ["ondc", "meesho", "myntra", "whatsapp"],
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+    published = {c["channel_id"] for c in body["channel_results"]}
+    assert published == {"ondc", "meesho", "myntra", "whatsapp"}
+    assert body["locked_channels"] == []
+
+
+def test_channels_endpoint_marks_pro_only_for_free_users():
+    """The picker needs to show a lock, not a checkbox publish() would ignore."""
+    client.post("/api/artisan", json={"uid": "freeuser2", "name": "Free Two"})
+    rows = client.get("/api/channels", params={"uid": "freeuser2"}).json()
+    by_id = {c["id"]: c for c in rows}
+    assert by_id["ondc"]["requires_pro"] is False, "ONDC is free forever"
+    assert by_id["meesho"]["requires_pro"] is True
+
+    client.post("/api/artisan", json={"uid": "freeuser2", "plan": "pro"})
+    rows = client.get("/api/channels", params={"uid": "freeuser2"}).json()
+    assert all(c["requires_pro"] is False for c in rows)
