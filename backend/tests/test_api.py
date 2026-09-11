@@ -807,7 +807,7 @@ def test_storefront_view_increments_the_counter():
     assert after == before + 2
 
 
-def test_impact_sums_uplift_and_reach():
+def test_impact_counts_products_and_reach():
     uid = "uid-impact-2"
     # Pro, so the second channel is genuinely reached and there is something to
     # aggregate — otherwise this silently becomes a test of the plan gate.
@@ -823,18 +823,16 @@ def test_impact_sums_uplift_and_reach():
     })
     imp = client.get(f"/api/impact/{uid}").json()
     assert imp["products"] == 2
-    # 30% conservative uplift on 1000 + 2000 = 300 + 600
-    assert imp["fair_value_uplift"] == 900
     assert imp["channels_reached"] == 2      # ondc + meesho across the two
-    assert imp["baseline_method"]            # documented + defensible
+    # No earnings figure: we never observe a sale, so we never claim one.
+    assert "fair_value_uplift" not in imp
 
 
 def test_impact_unknown_artisan_is_zeroed_not_error():
     imp = client.get("/api/impact/nobody-here").json()
     assert imp == {
         "products": 0, "channels_reached": 0, "total_views": 0,
-        "total_scans": 0, "fair_value_uplift": 0, "currency": "INR",
-        "baseline_method": imp["baseline_method"],
+        "total_scans": 0, "currency": "INR",
     }
 
 

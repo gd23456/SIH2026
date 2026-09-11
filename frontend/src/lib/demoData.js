@@ -257,11 +257,8 @@ export function demoImpact() {
     products: 3,
     channels_reached: 2,
     total_views: 47,
-    total_scans: 0,
-    fair_value_uplift: 1420,
+    total_scans: 6,
     currency: "INR",
-    baseline_method:
-      "Estimated additional income vs typical underpricing — based on our fair-price engine.",
   };
 }
 

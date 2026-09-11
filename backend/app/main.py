@@ -280,20 +280,20 @@ def get_artisan_by_uid(uid: str, session: Session = Depends(get_session)):
 FREE_CHANNELS = frozenset({"ondc"})
 
 
-_BASELINE_METHOD = (
-    "Estimated additional income vs typical underpricing — each product's fair "
-    "price minus a conservative baseline of 70% of it (a modest 30% underpricing "
-    "gap), summed across the artisan's listings. Based on our fair-price engine; "
-    "not audited sales data."
-)
 
 
 @app.get("/api/impact/{uid}", response_model=ImpactOut)
 def impact(uid: str, session: Session = Depends(get_session)):
-    """What the artisan actually gets: reach + estimated fair-value uplift."""
+    """What the artisan actually gets: real reach counted from their listings.
+
+    Deliberately only counters we can stand behind — products published,
+    channels reached, storefront views, QR scans. There is no earnings figure:
+    we do not observe sales, so any rupee number here would be a model's guess
+    wearing the costume of a bank balance.
+    """
     artisan = repo.get_artisan_by_uid(session, uid)
     data = repo.impact(session, artisan.id if artisan else None)
-    return ImpactOut(**data, baseline_method=_BASELINE_METHOD)
+    return ImpactOut(**data)
 
 
 @app.get("/api/channels", response_model=list[ChannelInfo])

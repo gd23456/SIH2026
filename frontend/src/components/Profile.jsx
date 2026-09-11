@@ -116,25 +116,24 @@ export default function Profile({ lang, account, setAccount, onBack, onMyProduct
       {impact && (
         <div className="card p-5 mt-5 bg-gradient-to-br from-haldi/15 to-leaf/10">
           <p className="font-bold text-clay-900">🌱 {t("impact", lang)}</p>
-          <div className="mt-3 rounded-2xl bg-white/70 p-4 text-center">
-            <div className="text-3xl font-extrabold text-leaf">
-              ₹{Number(impact.fair_value_uplift || 0).toLocaleString("en-IN")}
-            </div>
-            <p className="text-xs text-clay-600 mt-0.5">{t("impactUplift", lang)}</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            <div className="rounded-xl bg-white/70 p-3 text-center">
-              <div className="text-xl font-extrabold text-clay-800">{impact.products || 0}</div>
-              <div className="text-[10px] text-clay-500 leading-tight mt-0.5">{t("impactProducts", lang)}</div>
-            </div>
-            <div className="rounded-xl bg-white/70 p-3 text-center">
-              <div className="text-xl font-extrabold text-clay-800">{impact.channels_reached || 0}</div>
-              <div className="text-[10px] text-clay-500 leading-tight mt-0.5">{t("impactChannels", lang)}</div>
-            </div>
-            <div className="rounded-xl bg-white/70 p-3 text-center">
-              <div className="text-xl font-extrabold text-clay-800">{impact.total_views || 0}</div>
-              <div className="text-[10px] text-clay-500 leading-tight mt-0.5">{t("impactViews", lang)}</div>
-            </div>
+          {/* Four counters, every one of them observed. There used to be a big
+              green rupee figure here labelled "more earned through fair
+              pricing" — it was sum(price x 0.30), an assumption that the
+              artisan WOULD have underpriced by 30%. No sale is ever observed,
+              so nothing was earned. A number that looks like a bank balance
+              has to be one. */}
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            {[
+              [impact.products, "impactProducts"],
+              [impact.channels_reached, "impactChannels"],
+              [impact.total_views, "impactViews"],
+              [impact.total_scans, "impactScans"],
+            ].map(([value, key]) => (
+              <div key={key} className="rounded-2xl bg-white/70 p-4 text-center">
+                <div className="text-2xl font-extrabold text-clay-800">{value || 0}</div>
+                <div className="text-[11px] text-clay-500 leading-tight mt-0.5">{t(key, lang)}</div>
+              </div>
+            ))}
           </div>
           <p className="text-[10px] text-clay-400 mt-3 leading-snug">{t("impactNote", lang)}</p>
         </div>

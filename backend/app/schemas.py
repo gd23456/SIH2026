@@ -130,9 +130,7 @@ class ImpactOut(BaseModel):
     channels_reached: int = 0
     total_views: int = 0
     total_scans: int = 0
-    fair_value_uplift: int = 0
     currency: str = "INR"
-    baseline_method: str = ""
 
 
 class ChannelInfo(BaseModel):
