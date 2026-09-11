@@ -18,6 +18,8 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
   const ctrlRef = useRef(null);
   const speechCode = LANGS.find((l) => l.code === lang)?.speech || "en-IN";
 
+  const startingRef = useRef(false);
+  const cancelRef = useRef(false);
   useEffect(() => () => ctrlRef.current?.stop?.(), []);
 
   // Warn ahead of time when this phone has no voice pack for the chosen
@@ -51,8 +53,20 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
   }
 
   async function toggleMic() {
+    // startListening() is async — permissions, plugin import, the native
+    // start() call. A second tap during that window used to take the stop
+    // branch while ctrlRef still held the PREVIOUS controller (or nothing), so
+    // the tap was swallowed: the UI flipped to "not listening" and the mic
+    // that was still coming up stayed open. This latch makes a tap during
+    // startup mean "cancel", which is what the user intended by it.
+    if (startingRef.current) {
+      cancelRef.current = true;
+      return;
+    }
+
     if (listening) {
       await ctrlRef.current?.stop?.();
+      ctrlRef.current = null;
       setListening(false);
       setMicState(null);
       return;
@@ -62,21 +76,43 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
     // wiping a transcript the artisan has already typed or dictated.
     const existing = transcript.trim();
     setListening(true);
-    ctrlRef.current = await startListening(speechCode, {
-      onPartial: (text) => setTranscript([existing, text].filter(Boolean).join(" ")),
-      onFinal: (text) => {
-        const merged = [existing, text].filter(Boolean).join(" ").trim();
-        if (merged) setTranscript(merged);
-        setListening(false);
-        setMicState(null);
-      },
-      onError: (err) => {
-        setMicError(explain(err));
-        setListening(false);
-        setMicState(null);
-      },
-      onState: (st) => setMicState(st === "stopped" ? null : st),
-    });
+    startingRef.current = true;
+    cancelRef.current = false;
+    let ctrl = null;
+    try {
+      ctrl = await startListening(speechCode, {
+        onPartial: (text) => setTranscript([existing, text].filter(Boolean).join(" ")),
+        onFinal: (text) => {
+          const merged = [existing, text].filter(Boolean).join(" ").trim();
+          if (merged) setTranscript(merged);
+          setListening(false);
+          setMicState(null);
+        },
+        onError: (err) => {
+          setMicError(explain(err));
+          setListening(false);
+          setMicState(null);
+        },
+        onState: (st) => setMicState(st === "stopped" ? null : st),
+      });
+    } catch (e) {
+      // Without this the latch below never clears and the mic button is dead
+      // for the rest of the session — a worse failure than the one that threw.
+      setMicError(explain(e?.message || e));
+      setListening(false);
+      setMicState(null);
+    } finally {
+      startingRef.current = false;
+    }
+    ctrlRef.current = ctrl;
+    // Tapped stop while it was coming up: honour that now the handle exists.
+    if (ctrl && cancelRef.current) {
+      cancelRef.current = false;
+      await ctrl.stop?.();
+      ctrlRef.current = null;
+      setListening(false);
+      setMicState(null);
+    }
   }
 
   async function generate() {

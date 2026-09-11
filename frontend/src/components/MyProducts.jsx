@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { listListings, openExternal } from "../lib/api";
-import { Spinner } from "./ui";
+import { listListings, deleteListing, openExternal } from "../lib/api";
+import { Spinner, ConfirmSheet } from "./ui";
 import ProductImage from "./ProductImage";
 import { categoryFor } from "../lib/productImage";
 
@@ -9,7 +9,7 @@ import { categoryFor } from "../lib/productImage";
 // or a one-shot demo script?" — publish something, come back here, it's still
 // there, because the backend persisted it.
 
-function ProductCard({ row, lang }) {
+function ProductCard({ row, lang, onDelete }) {
   const title = row.title?.[lang] || row.title?.en || "";
   const disabled = row._demo;
   const cat = categoryFor(row);
@@ -44,30 +44,54 @@ function ProductCard({ row, lang }) {
     </div>
   );
 
+  // The delete button cannot live inside the card's own <button> — nested
+  // buttons are invalid and the inner one's clicks get swallowed. Both are
+  // children of a positioned wrapper instead.
+  const deleteButton = onDelete && (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onDelete(row);
+      }}
+      aria-label={t("delete", lang)}
+      className="absolute right-2 top-2 z-10 h-9 w-9 rounded-full bg-black/45 text-white text-sm backdrop-blur-[2px] flex items-center justify-center active:scale-90 transition"
+    >
+      🗑️
+    </button>
+  );
+
   // In offline demo mode nothing was persisted, so the storefront link would
   // 404. Show the card, just don't promise a page behind it.
-  if (disabled) return card;
+  if (disabled) return <div className="relative">{card}</div>;
 
   // Not an <a target="_blank">: Capacitor's WebView has multiple-window
   // support off, so on a device that tap does nothing at all.
   return (
-    <button
-      onClick={() => openExternal(row.storefront_url)}
-      className="block w-full text-left active:scale-[0.98] transition"
-    >
-      {card}
-    </button>
+    <div className="relative">
+      <button
+        onClick={() => openExternal(row.storefront_url)}
+        className="block w-full text-left active:scale-[0.98] transition"
+      >
+        {card}
+      </button>
+      {deleteButton}
+    </div>
   );
 }
 
-export default function MyProducts({ lang, onBack, onSellNew }) {
+export default function MyProducts({ lang, account, onBack, onSellNew }) {
   const [rows, setRows] = useState(null);
+  const [pending, setPending] = useState(null); // row awaiting delete confirmation
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const uid = account?.uid || "";
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const data = await listListings();
+        const data = await listListings(24, uid);
         if (alive) setRows(Array.isArray(data) ? data : []);
       } catch {
         if (alive) setRows([]); // listListings already falls back; belt-and-braces
@@ -76,7 +100,26 @@ export default function MyProducts({ lang, onBack, onSellNew }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [uid]);
+
+  async function confirmDelete() {
+    const row = pending;
+    if (!row) return;
+    setBusy(true);
+    setError("");
+    try {
+      await deleteListing(row.listing_id, uid);
+      // Only drop it from the grid once the server has actually deleted it.
+      // Removing optimistically would show a product as gone that is still
+      // live on ONDC — the one outcome worse than a slow delete.
+      setRows((rs) => rs.filter((r) => r.listing_id !== row.listing_id));
+      setPending(null);
+    } catch (e) {
+      setError(e?.status === 401 || e?.status === 403 ? t("deleteSignIn", lang) : t("deleteFailed", lang));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-full px-5 pt-4 pb-8 safe-top safe-bottom fade-in">
@@ -111,13 +154,35 @@ export default function MyProducts({ lang, onBack, onSellNew }) {
         <>
           <div className="grid grid-cols-2 gap-3 mt-5">
             {rows.map((row) => (
-              <ProductCard key={row.listing_id} row={row} lang={lang} />
+              <ProductCard
+                key={row.listing_id}
+                row={row}
+                lang={lang}
+                onDelete={uid && !row._demo ? setPending : undefined}
+              />
             ))}
           </div>
           <button className="btn-ghost mt-6" onClick={onSellNew}>
             + {t("sellAnother", lang)}
           </button>
         </>
+      )}
+
+      {error && (
+        <p className="text-center text-sm text-red-600 mt-4" role="alert">
+          {error}
+        </p>
+      )}
+
+      {pending && (
+        <ConfirmSheet
+          title={t("deleteProduct", lang)}
+          body={busy ? "…" : t("deleteProductBody", lang)}
+          confirmLabel={t("delete", lang)}
+          cancelLabel={t("cancel", lang)}
+          onConfirm={busy ? () => {} : confirmDelete}
+          onCancel={busy ? () => {} : () => setPending(null)}
+        />
       )}
     </div>
   );

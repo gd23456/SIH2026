@@ -116,11 +116,16 @@ export default function AuthScreen({ lang, onDone }) {
         {mode === "choose" && (
           <>
             <button className="btn-primary !bg-white !text-clay-800 border-2 border-clay-200" disabled={busy} onClick={google}>
+              {/* Google's own G, at its published geometry. The previous paths
+                  were hand-approximated and did not line up — the green arc
+                  carried a stray absolute `H4.2` that pulled it off-centre, so
+                  the mark rendered visibly broken. Brand guidelines make this
+                  worth getting exactly right on a real sign-in button. */}
               <svg viewBox="0 0 48 48" className="h-5 w-5 mr-3 shrink-0" aria-hidden="true">
-                <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.1-3.8 6.6-9.4 6.6-16.1z" />
-                <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.750H4.2v5.7C7.8 40.9 15.3 46 24 46z" />
-                <path fill="#FBBC05" d="M11.6 27.45c-.45-1.3-.7-2.7-.7-4.15s.25-2.85.7-4.15V13.45H4.2A22 22 0 0 0 2 23.3c0 3.55.85 6.9 2.2 9.85l7.4-5.7z" />
-                <path fill="#EA4335" d="M24 10.15c3.3 0 6.2 1.15 8.5 3.35l6.3-6.3C35 3.6 30 1.5 24 1.5 15.3 1.5 7.8 6.6 4.2 13.45l7.4 5.7C13.3 14.05 18.2 10.15 24 10.15z" />
+                <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z" />
+                <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z" />
+                <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z" />
+                <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z" />
               </svg>
               {t("continueGoogle", lang)}
             </button>

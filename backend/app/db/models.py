@@ -74,12 +74,28 @@ class Listing(SQLModel, table=True):
     id: str = Field(primary_key=True)
     artisan_id: int | None = Field(default=None, foreign_key="artisan.id")
 
+    # One column per supported language. Gemini already drafts the artisan's
+    # own tongue, but with only en/hi/kn columns that output was generated and
+    # then dropped on save — so a Tamil artisan's Tamil title never survived
+    # the round trip, and localised() fell back to English forever.
     title_en: str = ""
     title_hi: str = ""
     title_kn: str = ""
+    title_ta: str = ""
+    title_te: str = ""
+    title_bn: str = ""
+    title_mr: str = ""
+    title_gu: str = ""
+    title_or: str = ""
     description_en: str = ""
     description_hi: str = ""
     description_kn: str = ""
+    description_ta: str = ""
+    description_te: str = ""
+    description_bn: str = ""
+    description_mr: str = ""
+    description_gu: str = ""
+    description_or: str = ""
 
     material: str = ""
     category: str = ""

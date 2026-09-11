@@ -24,18 +24,15 @@ _WORK_MAX = 1600
 
 
 def _studio_background(size: tuple[int, int]) -> Image.Image:
-    """A soft, light studio gradient — flatters product photos."""
-    w, h = size
-    bg = Image.new("RGB", size, (247, 243, 236))  # warm cream
-    top = (255, 253, 248)
-    bottom = (232, 224, 210)
-    for y in range(h):
-        t = y / h
-        r = int(top[0] * (1 - t) + bottom[0] * t)
-        g = int(top[1] * (1 - t) + bottom[1] * t)
-        b = int(top[2] * (1 - t) + bottom[2] * t)
-        bg.paste((r, g, b), (0, y, w, y + 1))
-    return bg
+    """Pure white — the marketplace standard.
+
+    This was a warm cream gradient, which looked nicer in isolation and worse
+    everywhere it actually appears: ONDC, Meesho and Amazon all render product
+    tiles on white, so a cream backdrop reads as a dingy off-white rectangle
+    sitting on the page rather than as a cut-out product. White also makes a
+    slightly imperfect alpha edge far less visible than a gradient does.
+    """
+    return Image.new("RGB", size, (255, 255, 255))
 
 
 def _white_balance(img: Image.Image) -> Image.Image:
@@ -63,7 +60,10 @@ def _apply_clarity(rgb: Image.Image) -> Image.Image:
     not an over-processed filter.
     """
     rgb = _white_balance(rgb)
-    rgb = ImageOps.autocontrast(rgb, cutoff=1)
+    # preserve_tone: without it autocontrast stretches each channel
+    # independently, which swings a warm terracotta scene from +42 to -29 on
+    # R-B — a cold, blue-grey cast on exactly the crafts this app exists for.
+    rgb = ImageOps.autocontrast(rgb, cutoff=1, preserve_tone=True)
     rgb = rgb.filter(ImageFilter.MedianFilter(size=3))              # mild denoise
     rgb = rgb.filter(ImageFilter.UnsharpMask(radius=2, percent=115, threshold=3))
     rgb = ImageEnhance.Color(rgb).enhance(1.06)                     # subtle, not garish

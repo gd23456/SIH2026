@@ -661,12 +661,24 @@ def test_listing_image_serves_a_png():
 
 def test_search_finds_a_published_item_by_title_word():
     """The buyer beat: publish, then find that exact item in a search."""
-    body = _publish(price=749)
+    body = _publish(price=749, image_b64=base64.b64encode(_png_bytes()).decode())
     rows = client.get("/api/search?q=bamboo").json()
     assert any(r["listing_id"] == body["listing_id"] for r in rows)
     for r in rows:
         assert r["storefront_url"].endswith(f"/p/{r['listing_id']}")
         assert "image_url" in r
+
+
+def test_search_hides_listings_with_no_photo():
+    """A buyer tile is mostly image — a photo-less row renders as a grey box."""
+    no_photo = _publish(price=500)
+    with_photo = _publish(price=500, image_b64=base64.b64encode(_png_bytes()).decode())
+    ids = [r["listing_id"] for r in client.get("/api/search?q=bamboo").json()]
+    assert with_photo["listing_id"] in ids
+    assert no_photo["listing_id"] not in ids
+    # ...but the artisan still sees it in their own catalogue, to fix or delete.
+    mine = [r["listing_id"] for r in client.get("/api/listings").json()]
+    assert no_photo["listing_id"] in mine
 
 
 def test_search_matches_category_and_tags():
@@ -807,7 +819,7 @@ def test_storefront_view_increments_the_counter():
     assert after == before + 2
 
 
-def test_impact_sums_uplift_and_reach():
+def test_impact_counts_products_and_reach():
     uid = "uid-impact-2"
     # Pro, so the second channel is genuinely reached and there is something to
     # aggregate — otherwise this silently becomes a test of the plan gate.
@@ -823,18 +835,16 @@ def test_impact_sums_uplift_and_reach():
     })
     imp = client.get(f"/api/impact/{uid}").json()
     assert imp["products"] == 2
-    # 30% conservative uplift on 1000 + 2000 = 300 + 600
-    assert imp["fair_value_uplift"] == 900
     assert imp["channels_reached"] == 2      # ondc + meesho across the two
-    assert imp["baseline_method"]            # documented + defensible
+    # No earnings figure: we never observe a sale, so we never claim one.
+    assert "fair_value_uplift" not in imp
 
 
 def test_impact_unknown_artisan_is_zeroed_not_error():
     imp = client.get("/api/impact/nobody-here").json()
     assert imp == {
         "products": 0, "channels_reached": 0, "total_views": 0,
-        "total_scans": 0, "fair_value_uplift": 0, "currency": "INR",
-        "baseline_method": imp["baseline_method"],
+        "total_scans": 0, "currency": "INR",
     }
 
 
@@ -898,3 +908,99 @@ def test_channels_endpoint_marks_pro_only_for_free_users():
     client.post("/api/artisan", json={"uid": "freeuser2", "plan": "pro"})
     rows = client.get("/api/channels", params={"uid": "freeuser2"}).json()
     assert all(c["requires_pro"] is False for c in rows)
+
+
+# --- delete a listing ------------------------------------------------------
+
+
+def _publish_one(uid: str, name: str = "Meera", price: int = 900) -> str:
+    r = client.post("/api/publish", json={
+        "listing": LISTING_FIXTURE, "price": price, "artisan_uid": uid,
+        "artisan_name": name, "location": "Kutch", "channels": ["ondc"],
+    })
+    assert r.status_code == 200
+    return r.json()["listing_id"]
+
+
+def test_delete_removes_listing_and_its_publish_records():
+    uid = "uid-del-1"
+    client.post("/api/artisan", json={"uid": uid, "name": "Meera"})
+    listing_id = _publish_one(uid)
+
+    assert client.delete(f"/api/listings/{listing_id}?uid={uid}").status_code == 204
+    assert client.get(f"/p/{listing_id}").status_code == 404
+    # channels_reached must not keep counting a listing that is gone
+    assert client.get(f"/api/impact/{uid}").json() == {
+        "products": 0, "channels_reached": 0, "total_views": 0,
+        "total_scans": 0, "currency": "INR",
+    }
+
+
+def test_delete_rejects_someone_elses_listing():
+    owner, thief = "uid-del-owner", "uid-del-thief"
+    client.post("/api/artisan", json={"uid": owner, "name": "Meera"})
+    client.post("/api/artisan", json={"uid": thief, "name": "Nadia"})
+    listing_id = _publish_one(owner)
+
+    assert client.delete(f"/api/listings/{listing_id}?uid={thief}").status_code == 403
+    # and it is still there
+    assert client.get(f"/p/{listing_id}").status_code == 200
+
+
+def test_delete_without_uid_is_unauthorised():
+    uid = "uid-del-2"
+    client.post("/api/artisan", json={"uid": uid, "name": "Meera"})
+    listing_id = _publish_one(uid)
+    assert client.delete(f"/api/listings/{listing_id}").status_code == 401
+    assert client.get(f"/p/{listing_id}").status_code == 200
+
+
+def test_delete_unknown_listing_is_404_not_500():
+    uid = "uid-del-3"
+    client.post("/api/artisan", json={"uid": uid, "name": "Meera"})
+    _publish_one(uid)  # so the artisan exists with something published
+    assert client.delete(f"/api/listings/does-not-exist?uid={uid}").status_code == 404
+
+
+def test_my_products_is_scoped_to_the_signed_in_artisan():
+    mine, theirs = "uid-scope-mine", "uid-scope-theirs"
+    client.post("/api/artisan", json={"uid": mine, "name": "Meera"})
+    client.post("/api/artisan", json={"uid": theirs, "name": "Nadia"})
+    my_id = _publish_one(mine)
+    their_id = _publish_one(theirs)
+
+    ids = [r["listing_id"] for r in client.get(f"/api/listings?uid={mine}").json()]
+    assert my_id in ids
+    assert their_id not in ids  # "My Products" must never show someone else's
+
+    # No uid: the whole catalogue, which is what the home strip wants.
+    all_ids = [r["listing_id"] for r in client.get("/api/listings").json()]
+    assert my_id in all_ids and their_id in all_ids
+
+
+def test_publish_persists_all_nine_languages_including_odia():
+    """Odia is aliased (`or` is a Python keyword) and so is easy to drop.
+
+    model_dump() without by_alias yields {"or_": ...}, which every
+    title.get("or") downstream misses — Odia published empty while the other
+    eight went through, visible only to someone reading the app in Odia.
+    """
+    langs = ("en", "hi", "kn", "ta", "te", "bn", "mr", "gu", "or")
+    listing = {
+        **LISTING_FIXTURE,
+        "title": {c: f"title-{c}" for c in langs},
+        "description": {c: f"desc-{c}" for c in langs},
+    }
+    uid = "uid-nine-langs"
+    client.post("/api/artisan", json={"uid": uid, "name": "Meera"})
+    body = client.post("/api/publish", json={
+        "listing": listing, "price": 900, "artisan_uid": uid,
+        "artisan_name": "Meera", "location": "Kutch", "channels": ["ondc"],
+        "image_b64": base64.b64encode(_png_bytes()).decode(),
+    }).json()
+
+    row = next(r for r in client.get(f"/api/listings?uid={uid}").json()
+               if r["listing_id"] == body["listing_id"])
+    for code in langs:
+        assert row["title"][code] == f"title-{code}", f"title.{code} lost"
+        assert row["description"][code] == f"desc-{code}", f"description.{code} lost"

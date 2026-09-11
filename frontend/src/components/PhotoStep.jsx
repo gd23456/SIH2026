@@ -4,7 +4,13 @@ import { enhanceImage, getLastSource } from "../lib/api";
 import { Spinner } from "./ui";
 
 export default function PhotoStep({ lang, onDone, setSource }) {
-  const inputRef = useRef(null);
+  // Two inputs, not one. `capture="environment"` is not a hint the user can
+  // override — on Android it opens the camera and gives no route to the
+  // gallery. An artisan who already photographed their work, or who is being
+  // helped by someone with the photos on their phone, could not get past this
+  // step at all. The gallery input is the same element without `capture`.
+  const cameraRef = useRef(null);
+  const galleryRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null); // {original_b64, enhanced_b64, bg_removed, _demo}
 
@@ -38,9 +44,14 @@ export default function PhotoStep({ lang, onDone, setSource }) {
           <div className="h-48 w-48 rounded-3xl border-4 border-dashed border-clay-300 flex items-center justify-center text-6xl">
             📷
           </div>
-          <button className="btn-primary" onClick={() => inputRef.current?.click()}>
-            {t("takePhoto", lang)}
-          </button>
+          <div className="w-full space-y-3">
+            <button className="btn-primary !mt-0" onClick={() => cameraRef.current?.click()}>
+              📷 {t("takePhoto", lang)}
+            </button>
+            <button className="btn-ghost !mt-0" onClick={() => galleryRef.current?.click()}>
+              🖼️ {t("uploadPhoto", lang)}
+            </button>
+          </div>
         </div>
       )}
 
@@ -72,21 +83,27 @@ export default function PhotoStep({ lang, onDone, setSource }) {
             <button className="btn-primary" onClick={() => onDone(result.enhanced_b64)}>
               {t("next", lang)} →
             </button>
-            <button className="btn-ghost" onClick={() => inputRef.current?.click()}>
-              {t("retake", lang)}
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button className="btn-ghost !mt-0" onClick={() => cameraRef.current?.click()}>
+                📷 {t("retake", lang)}
+              </button>
+              <button className="btn-ghost !mt-0" onClick={() => galleryRef.current?.click()}>
+                🖼️ {t("uploadPhoto", lang)}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       <input
-        ref={inputRef}
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
         onChange={handleFile}
       />
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
     </div>
   );
 }

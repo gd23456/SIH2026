@@ -170,7 +170,12 @@ def publish(
     request: Request,
     session: Session = Depends(get_session),
 ):
-    listing = req.listing.model_dump()
+    # by_alias: LocalizedText stores Odia as `or_` because `or` is a Python
+    # keyword. Without the alias the dump hands back {"or_": "..."} and every
+    # downstream `title.get("or")` misses — Odia silently published empty while
+    # the other eight languages went through, which is exactly the kind of bug
+    # that only shows up if someone actually reads the app in Odia.
+    listing = req.listing.model_dump(by_alias=True)
     # Re-verify server-side so a persisted "Verified GI" badge is always
     # authoritative, never just whatever the client claimed.
     gi = gi_service.verify(listing)
@@ -280,20 +285,20 @@ def get_artisan_by_uid(uid: str, session: Session = Depends(get_session)):
 FREE_CHANNELS = frozenset({"ondc"})
 
 
-_BASELINE_METHOD = (
-    "Estimated additional income vs typical underpricing — each product's fair "
-    "price minus a conservative baseline of 70% of it (a modest 30% underpricing "
-    "gap), summed across the artisan's listings. Based on our fair-price engine; "
-    "not audited sales data."
-)
 
 
 @app.get("/api/impact/{uid}", response_model=ImpactOut)
 def impact(uid: str, session: Session = Depends(get_session)):
-    """What the artisan actually gets: reach + estimated fair-value uplift."""
+    """What the artisan actually gets: real reach counted from their listings.
+
+    Deliberately only counters we can stand behind — products published,
+    channels reached, storefront views, QR scans. There is no earnings figure:
+    we do not observe sales, so any rupee number here would be a model's guess
+    wearing the costume of a bank balance.
+    """
     artisan = repo.get_artisan_by_uid(session, uid)
     data = repo.impact(session, artisan.id if artisan else None)
-    return ImpactOut(**data, baseline_method=_BASELINE_METHOD)
+    return ImpactOut(**data)
 
 
 @app.get("/api/channels", response_model=list[ChannelInfo])
@@ -345,10 +350,14 @@ def _artisan_out(session: Session, artisan) -> ArtisanOut:
     )
 
 
+_LANG_CODES = ("en", "hi", "kn", "ta", "te", "bn", "mr", "gu", "or")
+
+
 def _summary(row, base: str) -> ListingSummary:
     return ListingSummary(
         listing_id=row.id,
-        title={"en": row.title_en, "hi": row.title_hi, "kn": row.title_kn},
+        title={c: getattr(row, f"title_{c}", "") or "" for c in _LANG_CODES},
+        description={c: getattr(row, f"description_{c}", "") or "" for c in _LANG_CODES},
         price=row.price,
         category=row.category,
         gi_candidate=row.gi_candidate,
@@ -365,16 +374,51 @@ def _summary(row, base: str) -> ListingSummary:
 def list_listings(
     request: Request,
     limit: int = 24,
+    uid: str = "",
     session: Session = Depends(get_session),
 ):
-    """Everything this artisan has published, newest first.
+    """Published listings, newest first.
 
-    Backs the "My Products" screen, which is what turns the demo from a
-    one-shot script into something that looks like a product.
+    With `uid`, only that artisan's — which is what "My Products" needs, since
+    it offers a delete button. Without it, the whole catalogue, which is what
+    the home screen's recent strip wants. This used to ignore the artisan
+    entirely and hand every caller everyone's listings, so "My Products" was
+    quietly showing other people's work.
     """
     limit = max(1, min(limit, 100))
     base = _base_url(request)
-    return [_summary(row, base) for row in repo.recent_listings(session, limit=limit)]
+    artisan = repo.get_artisan_by_uid(session, uid) if uid else None
+    if uid and artisan is None:
+        return []  # signed in, nothing published yet
+    rows = repo.recent_listings(
+        session, limit=limit, artisan_id=artisan.id if artisan else None
+    )
+    return [_summary(row, base) for row in rows]
+
+
+@app.delete("/api/listings/{listing_id}", status_code=204)
+def delete_listing(
+    listing_id: str,
+    uid: str = "",
+    session: Session = Depends(get_session),
+):
+    """Remove one of your own listings.
+
+    Ownership is enforced server-side against the signed-in uid. An artisan who
+    publishes a bad photo could not previously undo it by any means short of
+    raw SQL against the database.
+    """
+    if not uid:
+        raise HTTPException(401, "Sign in to delete a listing")
+    artisan = repo.get_artisan_by_uid(session, uid)
+    if artisan is None:
+        raise HTTPException(403, "Not your listing")
+    outcome = repo.delete_listing(session, listing_id, artisan.id)
+    if outcome == "missing":
+        raise HTTPException(404, "No such listing")
+    if outcome == "forbidden":
+        raise HTTPException(403, "Not your listing")
+    return Response(status_code=204)
 
 
 @app.get("/api/search", response_model=list[ListingSummary])

@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field
 
 
 class LocalizedText(BaseModel):
-    # en/hi/kn are always generated. The other six are populated only when the
-    # artisan chose that language, so the listing carries their tongue too.
+    # All nine are generated for every listing. They used to be en/hi/kn plus
+    # the artisan's own language, which meant a reader in any of the other six
+    # saw English for anything published by someone who did not speak it.
     en: str = ""
     hi: str = ""
     kn: str = ""
@@ -130,9 +131,7 @@ class ImpactOut(BaseModel):
     channels_reached: int = 0
     total_views: int = 0
     total_scans: int = 0
-    fair_value_uplift: int = 0
     currency: str = "INR"
-    baseline_method: str = ""
 
 
 class ChannelInfo(BaseModel):
@@ -172,6 +171,9 @@ class ListingSummary(BaseModel):
 
     listing_id: str
     title: LocalizedText
+    # Carried so the buyer grid and storefront can switch language without a
+    # round trip — the reader's language is not known when the listing is made.
+    description: LocalizedText = LocalizedText()
     price: int
     category: str = ""
     gi_candidate: str | None = None
