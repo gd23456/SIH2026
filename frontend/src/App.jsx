@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import Intro from "./components/Intro";
 import Welcome from "./components/Welcome";
 import AuthScreen from "./components/AuthScreen";
 import PhotoStep from "./components/PhotoStep";
@@ -25,10 +26,13 @@ export default function App() {
   const [listing, setListing] = useState(null);
   const [price, setPrice] = useState(0);
   const [source, setSource] = useState(null); // 'live' | 'demo'
-  const [view, setView] = useState("flow"); // flow | products | buyer | auth | profile | plans | privacy
+  const [account, setAccount] = useState(() => loadStoredAccount());
+  // intro | auth | flow | products | buyer | profile | plans | privacy
+  // No account means the intro, which is also where sign-out lands — so the
+  // signed-out destination is one rule, not a special case in two places.
+  const [view, setView] = useState(() => (loadStoredAccount() ? "flow" : "intro"));
   const [showConnect, setShowConnect] = useState(false);
   const [showLang, setShowLang] = useState(false);
-  const [account, setAccount] = useState(() => loadStoredAccount());
   const [confirmExit, setConfirmExit] = useState(false);
 
   function reset() {
@@ -46,7 +50,7 @@ export default function App() {
       reset();
       setView("flow");
     } else {
-      setView("auth");
+      setView("intro");
     }
   }
 
@@ -80,7 +84,7 @@ export default function App() {
   // resumes on the same step with the listing intact — only reset() clears it.
   // Hidden on the sign-in screen, which is meant to be a decision point.
   const NAV_VIEW = { flow: "sell", products: "products", buyer: "buyer", profile: "profile" };
-  const showNav = view !== "auth";
+  const showNav = view !== "auth" && view !== "intro";
   const navTab = NAV_VIEW[view] || (view === "plans" || view === "privacy" ? "profile" : "sell");
 
   function navigate(id) {
@@ -131,8 +135,10 @@ export default function App() {
     if (showLang) return setShowLang(false);
     if (showConnect) return setShowConnect(false);
     if (confirmExit) return setConfirmExit(false);
+    if (view === "intro") return null;           // root screen: back exits
+    if (view === "auth") return setView("intro"); // login came from the intro
     if (view === "plans" || view === "privacy") return setView("profile");
-    if (view !== "flow") return setView("flow"); // products / buyer / profile / auth
+    if (view !== "flow") return setView("flow"); // products / buyer / profile
     if (step > 1 && step < 5) return back();
     if (step > 0) return setStep(0); // step 1 or the published screen → welcome
     return null; // already at welcome: fall through to exit
@@ -179,6 +185,15 @@ export default function App() {
         )}
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          {view === "intro" && (
+            <Intro
+              lang={lang}
+              setLang={setLang}
+              onContinue={() => setView("auth")}
+              onConnect={() => setShowConnect(true)}
+            />
+          )}
+
           {view === "auth" && <AuthScreen lang={lang} onDone={onSignedIn} />}
 
           {view === "buyer" && <BuyerView lang={lang} onBack={() => setView("flow")} />}
@@ -200,7 +215,7 @@ export default function App() {
               onSignedOut={() => {
                 setAccount(null);
                 setStep(0);
-                setView("flow");
+                setView("intro");
               }}
             />
           )}
@@ -214,6 +229,7 @@ export default function App() {
           {view === "products" && (
             <MyProducts
               lang={lang}
+              account={account}
               onBack={() => setView("flow")}
               onSellNew={() => {
                 reset();

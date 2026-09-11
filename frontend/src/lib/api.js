@@ -104,7 +104,7 @@ let _lastBackendMode = null;
 // shared 12s ceiling those calls were aborted mid-flight and silently fell back
 // to canned data, which looked exactly like "the AI is broken" even with a
 // valid key. Slow is fine here; wrong is not.
-const AI_TIMEOUT_MS = 45000;
+const AI_TIMEOUT_MS = 60000; // 9-language listing generation is more output than the old 3
 
 async function jfetch(path, opts = {}, timeoutMs = 12000) {
   const ctrl = new AbortController();
@@ -321,20 +321,51 @@ export function qrUrl(listingId) {
   return `${apiBase()}/api/qr/${encodeURIComponent(listingId)}`;
 }
 
-/** Everything published so far, newest first. Falls back to canned rows. */
-export async function listListings(limit = 24) {
+/**
+ * Published listings, newest first. Falls back to canned rows.
+ *
+ * `uid` scopes the result to that artisan — "My Products". Without it you get
+ * the whole catalogue, which is what the home screen's recent strip wants.
+ */
+export async function listListings(limit = 24, uid = "") {
   if (forcedDemo()) {
     _lastSource = "demo";
     return demoListings();
   }
+  const q = uid ? `&uid=${encodeURIComponent(uid)}` : "";
   try {
-    const data = await jfetch(`/api/listings?limit=${limit}`);
+    const data = await jfetch(`/api/listings?limit=${limit}${q}`);
     _lastSource = "live";
     return data;
   } catch {
     _lastSource = "demo";
     return demoListings();
   }
+}
+
+/**
+ * Delete one of your own listings.
+ *
+ * Deliberately NOT wrapped in the demo fallback every other call here uses.
+ * Everywhere else, falling back to canned data degrades gracefully; here it
+ * would report a deletion that never happened and leave the row on screen
+ * looking gone until the next refresh brought it back. A delete either
+ * succeeded on the server or the caller needs to hear that it did not.
+ *
+ * @throws {Error} with `.status` set when the server refused.
+ */
+export async function deleteListing(listingId, uid) {
+  const res = await fetch(
+    `${apiBase()}/api/listings/${encodeURIComponent(listingId)}?uid=${encodeURIComponent(uid || "")}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) {
+    // 204 has no body, and neither do the error paths worth distinguishing.
+    const err = new Error(`delete failed: HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return true;
 }
 
 /** Buyer-side search across the published catalog. Falls back to demo rows. */

@@ -145,18 +145,32 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
       {/* Adjust within the fair range */}
       <div className="card p-5 mt-4">
         <p className="text-sm font-semibold text-clay-800">{t("adjustPrice", lang)}</p>
+        {/* Full range from zero, not just the suggested band. Clamping the
+            slider to [min_price, max_price] meant the artisan could not even
+            express a price they had already decided on — the control silently
+            overrode their judgement, which is the opposite of what a pricing
+            ASSISTANT should do. They can now pick anything; we still say where
+            the fair band sits and warn when they drop under it. */}
         <input
           type="range"
-          min={data.min_price}
+          min={0}
           max={data.max_price}
+          step={Math.max(1, Math.round(data.max_price / 200))}
           value={price}
           onChange={(e) => setPrice(Number(e.target.value))}
           className="w-full mt-3 accent-clay-600"
         />
         <div className="flex justify-between text-xs text-clay-400 mt-1">
-          <span>{inr(data.min_price)}</span>
-          <span>{inr(data.max_price)}</span>
+          <span>{inr(0)}</span>
+          <span className="text-clay-500 font-medium">
+            {t("fairRange", lang)}: {inr(data.min_price)}–{inr(data.max_price)}
+          </span>
         </div>
+        {price < data.min_price && (
+          <p className="text-xs text-[#a1650f] mt-2 leading-snug" role="status">
+            ⚠︎ {t("belowFair", lang)}
+          </p>
+        )}
       </div>
 
       <button className="btn-primary mt-6" onClick={() => onDone(price)}>
