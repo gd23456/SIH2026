@@ -13,4 +13,14 @@ ext {
     androidxJunitVersion = '1.1.5'
     androidxEspressoCoreVersion = '3.5.1'
     cordovaAndroidVersion = '10.1.1'
+
+    // @capacitor-firebase/authentication ships play-services-auth as
+    // `compileOnly` unless this flag is true — so without it the app COMPILES
+    // fine and then dies at launch with
+    //   NoClassDefFoundError: com.google.android.gms.auth.api.signin.GoogleSignIn
+    // the moment the plugin constructs its Google handler. Opting in makes it a
+    // real `implementation` dependency that is actually packaged into the APK.
+    rgcfaIncludeGoogle = true
+    firebaseAuthVersion = '22.3.1'
+    playServicesAuthVersion = '21.0.0'
 }

@@ -6,6 +6,10 @@ import { Spinner } from "./ui";
 
 export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
   const [listening, setListening] = useState(false);
+  // What the recogniser is ACTUALLY doing: "listening" | "restarting" | null.
+  // The button-tap flag alone kept saying "Listening…" through every gap
+  // between Android sessions, and permanently if a restart failed.
+  const [micState, setMicState] = useState(null);
   const [transcript, setTranscript] = useState("");
   const [busy, setBusy] = useState(false);
   const [supported] = useState(() => !!speechSupported());
@@ -50,6 +54,7 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
     if (listening) {
       await ctrlRef.current?.stop?.();
       setListening(false);
+      setMicState(null);
       return;
     }
     setMicError(null);
@@ -63,11 +68,14 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
         const merged = [existing, text].filter(Boolean).join(" ").trim();
         if (merged) setTranscript(merged);
         setListening(false);
+        setMicState(null);
       },
       onError: (err) => {
         setMicError(explain(err));
         setListening(false);
+        setMicState(null);
       },
+      onState: (st) => setMicState(st === "stopped" ? null : st),
     });
   }
 
@@ -126,7 +134,13 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
           </button>
         )}
         <p className="text-clay-600 font-medium text-center">
-          {listening ? t("listening", lang) : supported ? t("tapMic", lang) : t("orType", lang)}
+          {!listening
+            ? supported
+              ? t("tapMic", lang)
+              : t("orType", lang)
+            : micState === "listening"
+              ? t("listening", lang)
+              : t("micReconnecting", lang)}
         </p>
         {listening && (
           <p className="text-clay-400 text-xs text-center -mt-4">
@@ -140,7 +154,20 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
           </p>
         )}
 
-        <div className="w-full">
+        <div className="w-full relative">
+          {transcript.trim() && !listening && (
+            // Re-speak. There was no way to start over except selecting the
+            // whole box and deleting it by hand.
+            <button
+              onClick={() => {
+                setTranscript("");
+                setMicError(null);
+              }}
+              className="absolute right-3 top-3 z-10 rounded-full bg-clay-100 px-3 py-1 text-xs font-bold text-clay-600 active:scale-95"
+            >
+              {t("clearRedo", lang)}
+            </button>
+          )}
           <textarea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}

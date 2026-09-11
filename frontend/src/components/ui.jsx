@@ -1,5 +1,5 @@
 import React from "react";
-import { t } from "../lib/i18n";
+import { LANGS, t } from "../lib/i18n";
 
 export function Spinner({ label }) {
   return (
@@ -116,5 +116,85 @@ export function Field({ label, value }) {
       <span className="text-clay-500 text-sm">{label}</span>
       <span className="text-clay-900 text-sm font-medium text-right">{value}</span>
     </div>
+  );
+}
+
+/** Language picker sheet — the nine languages, opened from the home chip. */
+export function LanguageSheet({ lang, setLang, onClose }) {
+  return (
+    <div className="absolute inset-0 z-40 flex items-end justify-center bg-black/40 fade-in" onClick={onClose}>
+      <div
+        className="w-full bg-clay-50 rounded-t-3xl p-5 pb-8 safe-bottom max-h-full overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-extrabold text-clay-900">{t("chooseLang", lang)}</h3>
+          <button onClick={onClose} className="text-clay-500 text-sm font-medium px-2 py-1">
+            {t("close", lang)}
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          {LANGS.map((l) => (
+            <button
+              key={l.code}
+              onClick={() => {
+                setLang(l.code);
+                onClose();
+              }}
+              className={`rounded-2xl py-3 border-2 transition active:scale-95 ${
+                lang === l.code
+                  ? "border-clay-600 bg-clay-600 text-white shadow-soft"
+                  : "border-clay-200 bg-white text-clay-800"
+              }`}
+            >
+              <div className="text-base font-bold leading-tight">{l.native}</div>
+              <div className="text-[10px] opacity-70">{l.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const NAV_ITEMS = [
+  { id: "sell", labelKey: "navSell", icon: "＋" },
+  { id: "products", labelKey: "navProducts", icon: "🗂️" },
+  { id: "buyer", labelKey: "navBrowse", icon: "🛒" },
+  { id: "profile", labelKey: "navProfile", icon: "☺" },
+];
+
+/**
+ * Persistent bottom navigation.
+ *
+ * Without it the app was a forward-only funnel: every destination already
+ * existed, none was reachable without first returning to the welcome screen.
+ *
+ * Selling progress lives in App state, so switching away mid-flow and coming
+ * back resumes on the same step with the listing intact — only reset() clears
+ * it. That is what makes it safe to show these tabs during the flow.
+ */
+export function BottomNav({ active, lang, onNavigate }) {
+  return (
+    <nav className="shrink-0 border-t border-clay-100 bg-clay-50/95 backdrop-blur safe-bottom">
+      <div className="flex">
+        {NAV_ITEMS.map((item) => {
+          const on = active === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onNavigate(item.id)}
+              aria-current={on ? "page" : undefined}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-2 transition active:scale-95 ${
+                on ? "text-clay-700" : "text-clay-400"
+              }`}
+            >
+              <span className={`text-lg leading-none ${on ? "scale-110" : ""}`}>{item.icon}</span>
+              <span className="text-[10px] font-semibold">{t(item.labelKey, lang)}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
