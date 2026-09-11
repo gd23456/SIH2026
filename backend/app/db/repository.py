@@ -133,12 +133,24 @@ def save_listing(
     row = Listing(
         id=listing_id,
         artisan_id=artisan.id,
-        title_en=title.get("en", ""),
-        title_hi=title.get("hi", ""),
-        title_kn=title.get("kn", ""),
-        description_en=desc.get("en", ""),
-        description_hi=desc.get("hi", ""),
-        description_kn=desc.get("kn", ""),
+        title_en=title.get("en", "") or "",
+        title_hi=title.get("hi", "") or "",
+        title_kn=title.get("kn", "") or "",
+        title_ta=title.get("ta", "") or "",
+        title_te=title.get("te", "") or "",
+        title_bn=title.get("bn", "") or "",
+        title_mr=title.get("mr", "") or "",
+        title_gu=title.get("gu", "") or "",
+        title_or=title.get("or", "") or "",
+        description_en=desc.get("en", "") or "",
+        description_hi=desc.get("hi", "") or "",
+        description_kn=desc.get("kn", "") or "",
+        description_ta=desc.get("ta", "") or "",
+        description_te=desc.get("te", "") or "",
+        description_bn=desc.get("bn", "") or "",
+        description_mr=desc.get("mr", "") or "",
+        description_gu=desc.get("gu", "") or "",
+        description_or=desc.get("or", "") or "",
         material=listing.get("material", "") or "",
         category=listing.get("category", "") or "",
         craft_technique=listing.get("craft_technique", "") or "",
@@ -162,13 +174,25 @@ def get_listing(session: Session, listing_id: str) -> Listing | None:
     return session.get(Listing, listing_id)
 
 
-def recent_listings(session: Session, limit: int = 24) -> list[Listing]:
-    """Newest first — the artisan's most recent work is what they want to see."""
-    return list(
-        session.exec(
-            select(Listing).order_by(Listing.created_at.desc()).limit(limit)
-        ).all()
-    )
+def recent_listings(
+    session: Session,
+    limit: int = 24,
+    artisan_id: int | None = None,
+    with_image_only: bool = False,
+) -> list[Listing]:
+    """Newest first — the artisan's most recent work is what they want to see.
+
+    `artisan_id` scopes this to one artisan. Without it this returns the whole
+    catalogue, which is right for the home strip but wrong for "My Products":
+    that screen offers a delete button, and it must never offer one over
+    somebody else's listing.
+    """
+    stmt = select(Listing)
+    if artisan_id is not None:
+        stmt = stmt.where(Listing.artisan_id == artisan_id)
+    if with_image_only:
+        stmt = stmt.where(Listing.image_b64 != "")
+    return list(session.exec(stmt.order_by(Listing.created_at.desc()).limit(limit)).all())
 
 
 def search_listings(session: Session, query: str, limit: int = 24) -> list[Listing]:
@@ -178,14 +202,20 @@ def search_listings(session: Session, query: str, limit: int = 24) -> list[Listi
     title, category and the tags blob — enough to find "the item you just
     published" in the buyer view. An empty query returns the newest listings,
     so the buyer screen has something to show before anyone types.
+
+    Listings with no photo are excluded. A buyer catalogue tile is mostly
+    image, so a photo-less row renders as an empty grey square that looks like
+    a broken page — and nobody buys a craft they cannot see. They stay visible
+    in the artisan's own My Products, where they can be fixed or deleted.
     """
     q = (query or "").strip()
     if not q:
-        return recent_listings(session, limit=limit)
+        return recent_listings(session, limit=limit, with_image_only=True)
 
     like = f"%{q.lower()}%"
     stmt = (
         select(Listing)
+        .where(Listing.image_b64 != "")
         .where(
             func.lower(Listing.title_en).like(like)
             | func.lower(Listing.title_hi).like(like)
@@ -198,6 +228,32 @@ def search_listings(session: Session, query: str, limit: int = 24) -> list[Listi
         .limit(limit)
     )
     return list(session.exec(stmt).all())
+
+
+def delete_listing(session: Session, listing_id: str, artisan_id: int) -> str:
+    """Delete one listing and its publish records.
+
+    Returns "ok", "missing", or "forbidden" rather than raising: the route
+    turns those into status codes, and the distinction matters — a 403 on
+    someone else's listing must not be reported as a 404, which would let a
+    caller probe which ids exist.
+
+    The ChannelPublish rows go too. There is no FK cascade here, and leaving
+    them behind would keep inflating channels_reached on the impact card with
+    channels reached by a listing that no longer exists.
+    """
+    row = session.get(Listing, listing_id)
+    if row is None:
+        return "missing"
+    if row.artisan_id != artisan_id:
+        return "forbidden"
+    for pub in session.exec(
+        select(ChannelPublish).where(ChannelPublish.listing_id == listing_id)
+    ).all():
+        session.delete(pub)
+    session.delete(row)
+    session.commit()
+    return "ok"
 
 
 def get_artisan(session: Session, artisan_id: int | None) -> Artisan | None:

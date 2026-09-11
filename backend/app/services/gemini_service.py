@@ -21,7 +21,13 @@ _LANG_NAME = {
     "te": "Telugu", "bn": "Bengali", "mr": "Marathi", "gu": "Gujarati", "or": "Odia",
 }
 # Languages every listing always carries.
-_ALWAYS = ("en", "hi", "kn")
+#
+# All nine, not the original en/hi/kn. A buyer browsing in Odia was reading
+# English titles for every craft published by anyone who wasn't Odia — the app
+# spoke nine languages in its chrome and three in its content. Generating the
+# full set once at publish time is the only version that survives a language
+# switch, since nothing re-runs the model when the reader changes language.
+_ALWAYS = ("en", "hi", "kn", "ta", "te", "bn", "mr", "gu", "or")
 
 # Model names move faster than hackathons do. If the configured model isn't
 # available on a key, we walk down this list rather than silently dropping to
@@ -37,6 +43,22 @@ _FALLBACK_MODELS = [
 
 # Remembers the model that actually worked, so we pay the discovery cost once.
 _resolved_model: str | None = None
+
+# Models that answered 429 in this process. The free tier is a DAILY quota, so
+# once a model says "exceeded" it will keep saying it for hours — retrying it
+# on the next request just buys another slow failure. Skipping it outright is
+# what turns a 4-minute hang into an instant, honest fall back to mock.
+_exhausted: set[str] = set()
+
+# Hard ceiling per attempt. Without it the SDK's own retry/backoff on a 429 runs
+# for minutes inside a single call: a quota-exhausted key made one request take
+# 267 seconds, against a client that gives up at 45.
+_ATTEMPT_TIMEOUT_S = 25
+
+
+def _is_quota_error(e: Exception) -> bool:
+    text = str(e).lower()
+    return "429" in text or "quota" in text or "exceeded" in text or "rate limit" in text
 
 # "live" if real Gemini output produced the last result, "mock" if we fell back.
 # Lets the API tell the frontend whether to show the "● AI" or "demo" badge.
@@ -74,15 +96,21 @@ def _generate(parts: list) -> str | None:
         log.warning("Gemini SDK unavailable, using mock: %s", e)
         return None
 
-    # A model we've already proven works goes first.
-    models = _candidates()
-    if _resolved_model:
+    # A model we've already proven works goes first; ones we know are out of
+    # quota are dropped entirely.
+    models = [m for m in _candidates() if m not in _exhausted]
+    if _resolved_model and _resolved_model not in _exhausted:
         models = [_resolved_model, *[m for m in models if m != _resolved_model]]
+    if not models:
+        log.warning("Every Gemini model is out of quota today; using mock.")
+        return None
 
     last_error: Exception | None = None
     for name in models:
         try:
-            resp = genai.GenerativeModel(name).generate_content(parts)
+            resp = genai.GenerativeModel(name).generate_content(
+                parts, request_options={"timeout": _ATTEMPT_TIMEOUT_S}
+            )
             text = resp.text
             if _resolved_model != name:
                 log.info("Gemini using model: %s", name)
@@ -90,7 +118,13 @@ def _generate(parts: list) -> str | None:
             return text
         except Exception as e:
             last_error = e
-            log.warning("Gemini model %s failed (%s), trying next", name, e)
+            if _is_quota_error(e):
+                _exhausted.add(name)
+                if _resolved_model == name:
+                    _resolved_model = None
+                log.warning("Gemini model %s is out of quota — skipping it from now on", name)
+            else:
+                log.warning("Gemini model %s failed (%s), trying next", name, e)
 
     log.warning("All Gemini models failed, using mock. Last error: %s", last_error)
     return None
