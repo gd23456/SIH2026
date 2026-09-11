@@ -65,6 +65,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Explicit step so a missing translation shows up by name in the checks
+      # list. `npm run build` also runs this, but a failure there reads as a
+      # build error rather than what it is.
+      - name: Check translations
+        run: npm run check:i18n
+
       - name: Build
         run: npm run build
 
