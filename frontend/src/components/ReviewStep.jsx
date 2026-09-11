@@ -8,8 +8,8 @@ export default function ReviewStep({ lang, listing, imageB64, onDone }) {
   const desc = listing.description?.[view] || listing.description?.en || "";
 
   return (
-    <div className="flex flex-col min-h-full px-5 pb-8">
-      <h2 className="text-2xl font-bold text-clay-900 mt-4 mb-3">{t("yourListing", lang)}</h2>
+    <div className="flex flex-col min-h-full px-4 sm:px-5 pb-8">
+      <h2 className="text-2xl font-bold text-clay-900 mt-3 mb-3">{t("yourListing", lang)}</h2>
 
       <div className="card overflow-hidden fade-in">
         {imageB64 && (

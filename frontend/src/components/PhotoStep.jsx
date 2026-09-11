@@ -30,8 +30,8 @@ export default function PhotoStep({ lang, onDone, setSource }) {
   const originalSrc = result && `data:image/png;base64,${result.original_b64}`;
 
   return (
-    <div className="flex flex-col min-h-full px-5 pb-8">
-      <h2 className="text-2xl font-bold text-clay-900 mt-4">{t("addPhoto", lang)}</h2>
+    <div className="flex flex-col min-h-full px-4 sm:px-5 pb-8">
+      <h2 className="text-2xl font-bold text-clay-900 mt-3">{t("addPhoto", lang)}</h2>
 
       {!result && !busy && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 fade-in">

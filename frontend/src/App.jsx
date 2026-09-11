@@ -143,7 +143,7 @@ export default function App() {
   return (
     // Phone frame: fills screen on mobile, centered card on desktop
     <div className="min-h-full flex items-stretch sm:items-center justify-center sm:py-6">
-      <div className="w-full sm:max-w-[420px] bg-clay-50 sm:rounded-[2.5rem] sm:shadow-soft sm:overflow-hidden min-h-full sm:min-h-[860px] sm:max-h-[92vh] flex flex-col relative">
+      <div className="w-full sm:max-w-[440px] bg-clay-50 sm:rounded-[2.5rem] sm:shadow-soft sm:overflow-hidden min-h-[100dvh] sm:min-h-0 sm:h-[min(900px,92vh)] flex flex-col relative">
         {step > 0 && view === "flow" && (
           <>
             <Header

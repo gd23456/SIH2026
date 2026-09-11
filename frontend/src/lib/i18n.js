@@ -128,6 +128,10 @@ const STR = {
   },
   publish: { en: "Publish to ONDC", hi: "ONDC पर प्रकाशित करें", kn: "ONDC ಗೆ ಪ್ರಕಟಿಸಿ", ta: "ONDC-க்கு வெளியிடு", te: "ONDCకి ప్రచురించండి", bn: "ONDC-তে প্রকাশ করুন", mr: "ONDC वर प्रकाशित करा", gu: "ONDC પર પ્રકાશિત કરો", or: "ONDC ରେ ପ୍ରକାଶ କରନ୍ତୁ" },
   publishing: { en: "Publishing to the ONDC network…", hi: "ONDC नेटवर्क पर प्रकाशित हो रहा है…", kn: "ONDC ನೆಟ್‌ವರ್ಕ್‌ಗೆ ಪ್ರಕಟಿಸಲಾಗುತ್ತಿದೆ…", ta: "ONDC வலையமைப்பில் வெளியிடப்படுகிறது…", te: "ONDC నెట్‌వర్క్‌కు ప్రచురిస్తోంది…", bn: "ONDC নেটওয়ার্কে প্রকাশ হচ্ছে…", mr: "ONDC नेटवर्कवर प्रकाशित होत आहे…", gu: "ONDC નેટવર્ક પર પ્રકાશિત થઈ રહ્યું છે…", or: "ONDC ନେଟୱର୍କରେ ପ୍ରକାଶ ହେଉଛି…" },
+  // Channel-neutral publish copy (the button/spinner shouldn't always say ONDC).
+  publishNow: { en: "Publish", hi: "प्रकाशित करें", kn: "ಪ್ರಕಟಿಸಿ" },
+  publishToN: { en: "Publish to {n} channels", hi: "{n} चैनलों पर प्रकाशित करें", kn: "{n} ಚಾನೆಲ್‌ಗಳಿಗೆ ಪ್ರಕಟಿಸಿ" },
+  publishingNeutral: { en: "Publishing your product…", hi: "आपका उत्पाद प्रकाशित हो रहा है…", kn: "ನಿಮ್ಮ ಉತ್ಪನ್ನ ಪ್ರಕಟಿಸಲಾಗುತ್ತಿದೆ…" },
   // published
   published: { en: "You're live on ONDC! 🎉", hi: "आप ONDC पर लाइव हैं! 🎉", kn: "ನೀವು ONDC ನಲ್ಲಿ ಲೈವ್! 🎉", ta: "நீங்கள் ONDC-யில் நேரலையில்! 🎉", te: "మీరు ONDCలో లైవ్! 🎉", bn: "আপনি ONDC-তে লাইভ! 🎉", mr: "तुम्ही ONDC वर लाइव्ह आहात! 🎉", gu: "તમે ONDC પર લાઇવ છો! 🎉", or: "ଆପଣ ONDC ରେ ଲାଇଭ୍! 🎉" },
   publishedSub: {
