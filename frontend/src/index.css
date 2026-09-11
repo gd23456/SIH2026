@@ -23,12 +23,23 @@ body {
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
 @layer components {
+  /* flex + centred, not a plain block.
+     A <button> centres TEXT for free, which hid this for a long time: any
+     non-text child — an <svg> icon — is an inline box that sits on the text
+     baseline, so it hangs low and off-centre, and the margin utilities
+     meant to space it are inert with no flex container to act in. That is
+     exactly how the Google "G" on the sign-in button rendered misaligned
+     while an emoji (📱, a text glyph) in the button beside it looked fine.
+     Centring here fixes every icon button at once; text-only buttons render
+     identically either way. */
   .btn-primary {
-    @apply w-full rounded-2xl bg-clay-600 text-white text-lg font-semibold py-4
+    @apply w-full flex items-center justify-center gap-2 rounded-2xl bg-clay-600
+           text-white text-lg font-semibold py-4
            shadow-soft active:scale-[0.98] transition disabled:opacity-50;
   }
   .btn-ghost {
-    @apply w-full rounded-2xl border-2 border-clay-300 text-clay-800 text-base font-medium py-3
+    @apply w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-clay-300
+           text-clay-800 text-base font-medium py-3
            active:scale-[0.98] transition;
   }
   .card {
