@@ -13,15 +13,18 @@ export function Spinner({ label }) {
 export function Stepper({ step, lang }) {
   const steps = [1, 2, 3, 4, 5];
   return (
-    <div className="flex items-center gap-2 px-5 pt-2">
-      {steps.map((s) => (
-        <div
-          key={s}
-          className={`h-1.5 flex-1 rounded-full transition-all ${
-            s <= step ? "bg-clay-600" : "bg-clay-200"
-          }`}
-        />
-      ))}
+    <div className="flex items-center gap-3 px-4 sm:px-5 pt-2 pb-1">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        {steps.map((s) => (
+          <div
+            key={s}
+            className={`h-1.5 flex-1 rounded-full transition-all ${s <= step ? "bg-clay-600" : "bg-clay-200"}`}
+          />
+        ))}
+      </div>
+      <span className="text-[11px] font-semibold tracking-wide text-clay-500 shrink-0">
+        {t("step", lang)} {step}/5
+      </span>
     </div>
   );
 }
@@ -50,40 +53,38 @@ export function Avatar({ account, size = 32, onClick, className = "" }) {
 
 export function Header({ step, lang, onBack, onHome, sourceBadge, account, onProfile }) {
   return (
-    <div className="safe-top px-5 pt-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          {/* Always reachable. The 5-step flow used to be a trap: step 1 had no
-              back, step 5 had none either, so the only way out of a listing you
-              did not want to finish was to kill the app. */}
+    <div className="safe-top px-4 sm:px-5 pt-3">
+      <div className="flex items-center justify-between gap-3">
+        {/* left: home + back, comfortable tap targets. Both are conditionally
+            rendered now — no invisible placeholder hogging the row. The home
+            button stays the always-available exit from the 5-step flow. */}
+        <div className="flex items-center gap-1 min-w-0">
           {onHome && (
             <button
               onClick={onHome}
-              className="text-clay-500 text-base leading-none px-1.5 py-1 rounded-lg active:scale-90 transition"
               aria-label={t("home", lang)}
+              className="text-clay-500 text-lg leading-none w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition"
             >
               ⌂
             </button>
           )}
-          <button
-            onClick={onBack}
-            className={`text-clay-700 text-sm font-medium truncate ${
-              onBack ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-          >
-            ← {t("back", lang)}
-          </button>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-clay-700 text-sm font-medium flex items-center gap-1 pl-1 pr-2 h-9 rounded-full active:scale-95 transition truncate"
+            >
+              ← <span className="truncate">{t("back", lang)}</span>
+            </button>
+          )}
         </div>
-        <span className="text-xs font-semibold tracking-wide text-clay-500 shrink-0">
-          {t("step", lang)} {step} / 5
-        </span>
-        <div className="flex items-center gap-2">
+        {/* right: source badge + avatar */}
+        <div className="flex items-center gap-2 shrink-0">
           {sourceBadge === "demo" ? (
             <span className="chip !bg-haldi/20 !text-clay-800 !py-0.5 text-[11px]">demo</span>
           ) : sourceBadge === "live" ? (
             <span className="chip !bg-leaf/15 !text-leaf !py-0.5 text-[11px]">● AI</span>
           ) : null}
-          {onProfile && <Avatar account={account} size={30} onClick={onProfile} />}
+          {onProfile && <Avatar account={account} size={32} onClick={onProfile} />}
         </div>
       </div>
     </div>

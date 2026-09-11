@@ -76,8 +76,8 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
   // ---- channel selection ----
   if (phase === "select") {
     return (
-      <div className="flex flex-col min-h-full px-5 pb-8 fade-in">
-        <h2 className="text-2xl font-bold text-clay-900 mt-4">{t("publishTo", lang)}</h2>
+      <div className="flex flex-col min-h-full px-4 sm:px-5 pb-8 fade-in">
+        <h2 className="text-2xl font-bold text-clay-900 mt-3">{t("publishTo", lang)}</h2>
         <p className="text-clay-600 text-sm mt-1">{t("publishOnce", lang)}</p>
 
         <div className="card p-2 mt-4 divide-y divide-clay-100">
@@ -128,7 +128,9 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
         </div>
 
         <button className="btn-primary mt-6" onClick={doPublish}>
-          {t("publish", lang)} 🚀
+          {selected.size > 1
+            ? t("publishToN", lang).replace("{n}", selected.size)
+            : t("publishNow", lang)} 🚀
         </button>
 
         {upsell && (
@@ -151,7 +153,7 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
   if (phase === "publishing" || !res) {
     return (
       <div className="min-h-full flex items-center justify-center">
-        <Spinner label={t("publishing", lang)} />
+        <Spinner label={t("publishingNeutral", lang)} />
       </div>
     );
   }
@@ -161,7 +163,7 @@ export default function PublishStep({ lang, listing, price, imageB64, account, o
   const ondc = results.find((r) => r.channel_id === "ondc" && r.kind === "live");
 
   return (
-    <div className="flex flex-col min-h-full px-5 pb-8 fade-in">
+    <div className="flex flex-col min-h-full px-4 sm:px-5 pb-8 fade-in">
       <div className="text-center mt-8">
         <div className="text-6xl">🎉</div>
         <h2 className="text-2xl font-extrabold text-clay-900 mt-3">{t("published", lang)}</h2>

@@ -105,8 +105,8 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
   }
 
   return (
-    <div className="flex flex-col min-h-full px-5 pb-8">
-      <h2 className="text-2xl font-bold text-clay-900 mt-4">{t("describe", lang)}</h2>
+    <div className="flex flex-col min-h-full px-4 sm:px-5 pb-8">
+      <h2 className="text-2xl font-bold text-clay-900 mt-3">{t("describe", lang)}</h2>
       <p className="text-clay-500 text-sm mt-1">{t("hintEx", lang)}</p>
 
       <div className="flex-1 flex flex-col items-center justify-center gap-6">

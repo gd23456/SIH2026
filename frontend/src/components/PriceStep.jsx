@@ -32,8 +32,8 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
   const maxBar = Math.max(...data.breakdown.map((b) => b.amount), 1);
 
   return (
-    <div className="flex flex-col min-h-full px-5 pb-8 fade-in">
-      <h2 className="text-2xl font-bold text-clay-900 mt-4">{t("fairPrice", lang)}</h2>
+    <div className="flex flex-col min-h-full px-4 sm:px-5 pb-8 fade-in">
+      <h2 className="text-2xl font-bold text-clay-900 mt-3">{t("fairPrice", lang)}</h2>
 
       <div className="card p-6 mt-4 text-center">
         <p className="text-clay-500 text-sm">{t("suggested", lang)}</p>
