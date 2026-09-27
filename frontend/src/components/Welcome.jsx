@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { LANGS, t } from "../lib/i18n";
-import { Avatar } from "./ui";
+import { Avatar, Icon } from "./ui";
 import { listListings, openExternal } from "../lib/api";
 import ProductImage from "./ProductImage";
 
@@ -20,13 +20,17 @@ const HOW_IT_WORKS = [
   { icon: "🚀", key: "hiwPublish" },
 ];
 
-export default function Welcome({ lang, account, onStart, onMyProducts, onProfile, onOpenLang }) {
-  const [recent, setRecent] = useState(null); // null = loading, [] = none yet
+export default function Welcome({
+  lang, account, onStart, onMyProducts, onProfile, onOpenLang, onGuide,
+  draft = null, onResume, onDiscardDraft, queue = [], onFlushQueue, recentOverride,
+}) {
+  const [recent, setRecent] = useState(recentOverride ?? null); // null = loading, [] = none yet
 
   // A strip of what the artisan has already published, so a returning user sees
   // their own work rather than an empty marketing screen. Never blocks the CTA:
   // any failure just leaves the first-run guidance in place.
   useEffect(() => {
+    if (recentOverride) return undefined;
     let alive = true;
     (async () => {
       try {
@@ -53,8 +57,19 @@ export default function Welcome({ lang, account, onStart, onMyProducts, onProfil
           <span className="text-lg font-extrabold text-clay-900 truncate">{t("appName", lang)}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {onGuide && (
+            <button
+              onClick={onGuide}
+              aria-label={t("helpHow", lang)}
+              className="h-9 w-9 rounded-full border border-clay-200 bg-white text-clay-700 flex items-center justify-center active:scale-95 transition"
+            >
+              <Icon name="help" size={18} />
+            </button>
+          )}
           <button
             onClick={onOpenLang}
+            data-tour="lang-chip"
+            aria-label={t("chooseLang", lang)}
             className="rounded-full border border-clay-200 bg-white px-3 py-1.5 text-xs font-bold text-clay-800 active:scale-95 transition"
           >
             {current.native} ▾
@@ -68,8 +83,46 @@ export default function Welcome({ lang, account, onStart, onMyProducts, onProfil
         <h1 className="text-[26px] leading-tight font-extrabold text-clay-900">{t("tagline", lang)}</h1>
       </div>
 
+      {/* An unfinished product outlives the app being closed. */}
+      {draft && (
+        <div className="mt-5 card p-4 flex items-center gap-3 fade-in">
+          {draft.imageB64 ? (
+            <img src={`data:image/png;base64,${draft.imageB64}`} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" />
+          ) : (
+            <span className="h-14 w-14 rounded-xl bg-clay-100 text-clay-600 flex items-center justify-center shrink-0" aria-hidden="true"><Icon name="cube" size={26} /></span>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-clay-900 leading-tight">{t("draftTitle", lang)}</p>
+            <p className="text-xs text-clay-muted mt-0.5 truncate">
+              {draft.title || t("draftSub", lang)}
+            </p>
+          </div>
+          <div className="flex flex-col gap-1 shrink-0">
+            <button onClick={onResume} className="min-h-[40px] rounded-full bg-clay-600 text-white px-4 text-sm font-bold active:scale-95">
+              {t("draftContinue", lang)}
+            </button>
+            <button onClick={onDiscardDraft} className="min-h-[32px] text-xs font-semibold text-clay-muted">
+              {t("draftDiscard", lang)}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {queue.length > 0 && (
+        <div className="mt-3 rounded-2xl bg-haldi/15 border border-haldi/40 px-4 py-3 flex items-center gap-3" role="status">
+          <Icon name="wifiOff" size={22} className="text-clay-800" />
+          <p className="flex-1 text-sm text-clay-800 leading-snug">
+            {t("pubWaitingN", lang).replace("{n}", queue.length)}
+          </p>
+          <button onClick={onFlushQueue} className="min-h-[40px] px-3 text-sm font-bold text-clay-800 underline underline-offset-4">
+            {t("pubRetryNow", lang)}
+          </button>
+        </div>
+      )}
+
       <button
         onClick={onStart}
+        data-tour="sell-cta"
         className="mt-5 w-full rounded-3xl bg-clay-600 text-white p-5 shadow-soft active:scale-[0.98] transition text-left"
       >
         <div className="flex items-center gap-4">
@@ -125,10 +178,19 @@ export default function Welcome({ lang, account, onStart, onMyProducts, onProfil
               </div>
             ))}
           </div>
+          {onGuide && (
+            <button
+              onClick={onGuide}
+              className="mt-2 w-full min-h-[44px] flex items-center justify-center gap-1.5 text-sm font-semibold text-clay-600"
+            >
+              <Icon name="book" size={16} />
+              {t("seeJourney", lang)}
+            </button>
+          )}
         </div>
       )}
 
-      <p className="mt-auto pt-6 text-center text-xs text-clay-400">
+      <p className="mt-auto pt-6 text-center text-xs text-clay-muted">
         Powered by ONDC · Ministry of Textiles ready
       </p>
     </div>

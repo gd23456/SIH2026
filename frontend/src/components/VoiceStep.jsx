@@ -155,7 +155,7 @@ export default function VoiceStep({ lang, imageB64, onDone, setSource }) {
 
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         {supported && (
-          <button onClick={toggleMic} className="relative" aria-label="microphone">
+          <button onClick={toggleMic} className="relative" aria-label={t("tapMic", lang)} data-tour="voice-mic">
             <span className={listening ? "mic-ring absolute inset-0" : ""} />
             <span
               className={`relative flex items-center justify-center h-36 w-36 rounded-full shadow-soft transition ${

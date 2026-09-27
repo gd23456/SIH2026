@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
 import { listListings, deleteListing, openExternal } from "../lib/api";
-import { Spinner, ConfirmSheet } from "./ui";
+import { Spinner, ConfirmSheet, Icon } from "./ui";
 import ProductImage from "./ProductImage";
 import { categoryFor } from "../lib/productImage";
 
@@ -79,7 +79,7 @@ function ProductCard({ row, lang, onDelete }) {
   );
 }
 
-export default function MyProducts({ lang, account, onBack, onSellNew }) {
+export default function MyProducts({ lang, account, onBack, onSellNew, onGuide }) {
   const [rows, setRows] = useState(null);
   const [pending, setPending] = useState(null); // row awaiting delete confirmation
   const [busy, setBusy] = useState(false);
@@ -142,13 +142,32 @@ export default function MyProducts({ lang, account, onBack, onSellNew }) {
           <Spinner label={t("loadingProducts", lang)} />
         </div>
       ) : rows.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-          <div className="text-5xl opacity-40">🧺</div>
-          <p className="font-bold text-clay-900 mt-4">{t("noProducts", lang)}</p>
-          <p className="text-clay-600 text-sm mt-2">{t("noProductsSub", lang)}</p>
+        // Empty state answers: what's missing (no products), why it matters
+        // (buyers find you once you publish), and what to do (one button).
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-2 py-8 fade-in">
+          <div className="relative h-28 w-28" aria-hidden="true">
+            <div className="absolute inset-0 rounded-[2rem] bg-clay-100 rotate-6" />
+            <div className="absolute inset-0 rounded-[2rem] bg-white border-2 border-dashed border-clay-300 flex items-center justify-center text-5xl">
+              🧺
+            </div>
+            <span className="absolute -right-2 -bottom-2 h-10 w-10 rounded-full bg-clay-600 text-white text-2xl font-bold flex items-center justify-center shadow-soft">
+              +
+            </span>
+          </div>
+          <p className="text-xl font-extrabold text-clay-900 mt-6">{t("noProducts", lang)}</p>
+          <p className="text-clay-600 text-[15px] mt-2 leading-relaxed max-w-xs">{t("noProductsSub", lang)}</p>
           <button className="btn-primary mt-6" onClick={onSellNew}>
-            {t("start", lang)} →
+            <span aria-hidden="true">📷</span> {t("addProduct", lang)}
           </button>
+          {onGuide && (
+            <button
+              onClick={onGuide}
+              className="mt-2 min-h-[44px] flex items-center justify-center gap-1.5 text-sm font-semibold text-clay-600"
+            >
+              <Icon name="book" size={16} />
+              {t("helpHow", lang)}
+            </button>
+          )}
         </div>
       ) : (
         <>

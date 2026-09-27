@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { t } from "../lib/i18n";
 import { getPrice, getLastSource } from "../lib/api";
-import { Spinner } from "./ui";
+import { Spinner, HelpLink } from "./ui";
 
 const inr = (n) => "₹" + Number(n || 0).toLocaleString("en-IN");
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -41,18 +41,22 @@ const TONE = {
   clay: { text: "text-clay-700", bg: "bg-clay-100", dot: "bg-clay-500" },
 };
 
-export default function PriceStep({ lang, listing, onDone, setSource }) {
-  const [data, setData] = useState(null);
-  const [price, setPrice] = useState(0);
+export default function PriceStep({ lang, listing, onDone, setSource, onHelp, initialData = null, initialPrice = null }) {
+  // initialData: the tutorial renders this real screen with a known answer
+  // instead of asking the server.
+  const [data, setData] = useState(initialData);
+  const [price, setPrice] = useState(initialPrice ?? initialData?.suggested_price ?? 0);
 
   useEffect(() => {
+    if (initialData) return undefined;
     let alive = true;
     (async () => {
       const p = await getPrice(listing);
       if (!alive) return;
       setSource?.(getLastSource());
       setData(p);
-      setPrice(p.suggested_price);
+      // Coming back to change the price keeps the artisan's own choice.
+      setPrice(initialPrice ?? p.suggested_price);
     })();
     return () => { alive = false; };
   }, []);
@@ -80,7 +84,7 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
       <h2 className="text-2xl font-bold text-clay-900 mt-3">{t("fairPrice", lang)}</h2>
 
       {/* Hero price + verdict */}
-      <div className="card p-6 mt-4 text-center">
+      <div className="card p-6 mt-4 text-center" data-tour="price-hero">
         <p className="text-clay-500 text-sm">{t("suggested", lang)}</p>
         <div className="text-6xl font-extrabold text-clay-800 mt-1 leading-none">{inr(price)}</div>
 
@@ -142,6 +146,8 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
         })()}
       </div>
 
+      {onHelp && <HelpLink label={t("howPriceWorks", lang)} onClick={() => onHelp("price")} className="mt-1 self-start" />}
+
       {/* Adjust within the fair range */}
       <div className="card p-5 mt-4">
         <p className="text-sm font-semibold text-clay-800">{t("adjustPrice", lang)}</p>
@@ -173,8 +179,8 @@ export default function PriceStep({ lang, listing, onDone, setSource }) {
         )}
       </div>
 
-      <button className="btn-primary mt-6" onClick={() => onDone(price)}>
-        {t("publish", lang)} 🚀
+      <button className="btn-primary mt-6" onClick={() => onDone(price, data.suggested_price)}>
+        {t("priceNext", lang)} →
       </button>
     </div>
   );

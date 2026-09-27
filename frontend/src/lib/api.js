@@ -237,26 +237,41 @@ export async function getPrice(listing) {
 export async function publish({
   listing, price, image_b64, artisan_name, location,
   channels = ["ondc"], artisan_uid = null, artisan_email = "", artisan_photo_url = "",
+  model_job_id = null, model_token = null, edited_fields = [],
 }) {
+  // Explicit demo mode only. A real publish that fails must NEVER come back
+  // looking like a success: the artisan would believe the product is live
+  // when nothing exists. Instead the caller queues it (lib/publishQueue).
   if (forcedDemo()) {
     _lastSource = "demo";
     return demoPublish(listing, price, channels);
   }
+  const { _sample, ...cleanListing } = listing || {};
+  let res;
   try {
-    const data = await jfetch("/api/publish", {
+    res = await fetch(apiBase() + "/api/publish", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        listing, price, image_b64, artisan_name, location,
+        listing: cleanListing, price, image_b64, artisan_name, location,
         channels, artisan_uid, artisan_email, artisan_photo_url,
+        model_job_id, model_token, edited_fields,
       }),
     });
-    _lastSource = "live";
-    return data;
   } catch {
-    _lastSource = "demo";
-    return demoPublish(listing, price, channels);
+    const err = new Error("network");
+    err.network = true;
+    throw err;
   }
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    // 5xx is the server's problem, not the listing's: worth retrying later.
+    err.network = res.status >= 500;
+    throw err;
+  }
+  _lastSource = "live";
+  return res.json();
 }
 
 // ---- accounts + channels (Phase 3) ----------------------------------------

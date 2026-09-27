@@ -16,11 +16,19 @@ export default {
           700: "#874f27",
           800: "#6d4124",
           900: "#5a3720",
+          // Secondary text that still passes WCAG AA (5.3:1 on clay-50,
+          // 5.7:1 on white). clay-400/500 are for strokes and fills only.
+          muted: "#8f5b30",
         },
+        // The capture studio's near-black and the viewer's backdrop — named
+        // here instead of hex literals in components.
+        ink: "#15100c",
+        whatsapp: "#25D366",
+        stage: "#efe5d6",
         indigo: {
           brand: "#2b2a5c",
         },
-        haldi: "#e8a13a",
+        haldi: { DEFAULT: "#e8a13a", ink: "#7a5410" },
         leaf: "#3f7d5a",
       },
       fontFamily: {

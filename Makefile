@@ -119,3 +119,6 @@ clean: ## Remove build artifacts and caches (keeps your venv + node_modules)
 	rm -rf frontend/dist backend/.pytest_cache backend/.ruff_cache
 	find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
 	@echo "🧹 Cleaned"
+
+model3d: ## Run the local 3D worker (Hunyuan3D-2mv) on :8100 — see model3d_server/README.md
+	cd model3d_server && .venv/bin/uvicorn server:app --host 127.0.0.1 --port 8100

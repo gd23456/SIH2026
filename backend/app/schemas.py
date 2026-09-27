@@ -94,6 +94,13 @@ class PublishRequest(BaseModel):
     artisan_email: str = ""
     artisan_photo_url: str = ""
     channels: list[str] = ["ondc"]
+    # 3D job made from the six capture views, and the device token that proves
+    # this caller created it (so nobody can attach someone else's model).
+    model_job_id: str | None = None
+    model_token: str | None = None
+    # Text fields the artisan changed by hand. Everything else is AI-drafted,
+    # and the storefront says so.
+    edited_fields: list[str] = []
 
 
 # --- accounts (Phase 3) ----------------------------------------------------
@@ -181,6 +188,9 @@ class ListingSummary(BaseModel):
     gi_state: str | None = None
     has_image: bool = False
     image_url: str
+    # "ready" only when a real model file exists; None when no 3D was made.
+    model_status: str | None = None
+    model_url: str | None = None
     storefront_url: str
     created_at: datetime
 
@@ -197,3 +207,24 @@ class PublishResponse(BaseModel):
     # still succeeds on the channels they DO have; the UI turns this into an
     # upgrade prompt rather than a failure.
     locked_channels: list[str] = []
+
+
+# --- 3D models ---------------------------------------------------------------
+
+
+class ModelJobOut(BaseModel):
+    job_id: str
+    # queued | processing | ready | failed | unavailable | expired
+    status: str
+    progress: int = 0
+    provider: str = ""
+    model_version: str = ""
+    # True for the development provider: the app labels it a test model.
+    is_test_model: bool = False
+    error: str = ""
+    views: list[str] = []
+    model_url: str | None = None
+    created_at: datetime
+    finished_at: datetime | None = None
+    # Only on creation; the device must keep it — it is never shown again.
+    token: str | None = None

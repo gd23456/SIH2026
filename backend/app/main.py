@@ -14,24 +14,29 @@ Endpoints:
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import binascii
 import io
+import json
 import logging
+import os
 import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import qrcode
-from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
 from .config import get_settings
 from .db import get_session, init_db
 from .db import repository as repo
+from .db.models import ModelJob
 from .schemas import (
     ArtisanOut,
     ArtisanUpsert,
@@ -40,6 +45,7 @@ from .schemas import (
     GenerateListingRequest,
     ImpactOut,
     ListingSummary,
+    ModelJobOut,
     PriceRequest,
     PriceResponse,
     PublishRequest,
@@ -53,9 +59,11 @@ from .services import (
     gi_service,
     image_service,
     integrations,
+    model3d,
     ondc_service,
     pricing_service,
 )
+from .services.model3d import jobs as model_jobs
 
 logging.basicConfig(level=logging.INFO)
 settings = get_settings()
@@ -66,7 +74,15 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # The 3D worker: resumes any queued/processing jobs left by a previous run.
+    stop = asyncio.Event()
+    task = None
+    if os.environ.get("KARIGAR_DISABLE_MODEL_WORKER") != "1":
+        task = asyncio.create_task(model_jobs.worker_loop(stop))
     yield
+    stop.set()
+    if task is not None:
+        await task
 
 
 app = FastAPI(
@@ -75,6 +91,11 @@ app = FastAPI(
     description="AI co-seller for artisans",
     lifespan=lifespan,
 )
+
+# Vendored, version-pinned assets for the storefront (model-viewer for 3D).
+# Served from here rather than a CDN so a buyer's page works on a network
+# with no internet route — the same rule as the rest of the storefront.
+app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -125,7 +146,7 @@ def health():
         "configured_model": settings.GEMINI_MODEL,
         # One glance at what's actually wired: gemini live|mock, rembg bool,
         # firebase configured|off.
-        "integrations": integrations.status(),
+        "integrations": {**integrations.status(), "model3d": model3d.provider_name()},
     }
 
 
@@ -198,6 +219,19 @@ def publish(
         artisan_email=req.artisan_email,
         artisan_photo_url=req.artisan_photo_url,
     )
+
+    # Link the product's 3D job — only with the token the creating device
+    # holds, so a guessed job id can't graft someone else's model on.
+    row = repo.get_listing(session, listing_id)
+    edited = [f for f in req.edited_fields if f in _EDITABLE_FIELDS]
+    if row is not None:
+        row.edited_fields_json = json.dumps(sorted(set(edited)))
+        if req.model_job_id and req.model_token and model_jobs.attach_to_listing(
+            session, req.model_job_id, req.model_token, listing_id
+        ):
+            row.model_job_id = req.model_job_id
+        session.add(row)
+        session.commit()
 
     base = _base_url(request)
     storefront = f"{base}/p/{listing_id}"
@@ -353,8 +387,21 @@ def _artisan_out(session: Session, artisan) -> ArtisanOut:
 _LANG_CODES = ("en", "hi", "kn", "ta", "te", "bn", "mr", "gu", "or")
 
 
-def _summary(row, base: str) -> ListingSummary:
+def _model_info(session: Session, row, base: str) -> tuple[str | None, str | None]:
+    if not getattr(row, "model_job_id", None):
+        return None, None
+    job = session.get(ModelJob, row.model_job_id)
+    if job is None:
+        return None, None
+    url = f"{base}/api/models/{job.id}/model.glb" if job.status == "ready" and job.has_model else None
+    return job.status, url
+
+
+def _summary(row, base: str, session: Session | None = None) -> ListingSummary:
+    status, url = _model_info(session, row, base) if session is not None else (None, None)
     return ListingSummary(
+        model_status=status,
+        model_url=url,
         listing_id=row.id,
         title={c: getattr(row, f"title_{c}", "") or "" for c in _LANG_CODES},
         description={c: getattr(row, f"description_{c}", "") or "" for c in _LANG_CODES},
@@ -393,7 +440,7 @@ def list_listings(
     rows = repo.recent_listings(
         session, limit=limit, artisan_id=artisan.id if artisan else None
     )
-    return [_summary(row, base) for row in rows]
+    return [_summary(row, base, session) for row in rows]
 
 
 @app.delete("/api/listings/{listing_id}", status_code=204)
@@ -413,7 +460,16 @@ def delete_listing(
     artisan = repo.get_artisan_by_uid(session, uid)
     if artisan is None:
         raise HTTPException(403, "Not your listing")
+    existing = repo.get_listing(session, listing_id)
+    job_id = existing.model_job_id if existing is not None and existing.artisan_id == artisan.id else None
     outcome = repo.delete_listing(session, listing_id, artisan.id)
+    if outcome == "ok" and job_id:
+        # The product is gone, so are its photos and model.
+        job = session.get(ModelJob, job_id)
+        if job is not None:
+            session.delete(job)
+            session.commit()
+        model_jobs.delete_job_files(job_id)
     if outcome == "missing":
         raise HTTPException(404, "No such listing")
     if outcome == "forbidden":
@@ -436,7 +492,7 @@ def search(
     """
     limit = max(1, min(limit, 100))
     base = _base_url(request)
-    return [_summary(row, base) for row in repo.search_listings(session, q, limit=limit)]
+    return [_summary(row, base, session) for row in repo.search_listings(session, q, limit=limit)]
 
 
 def _img_mime(raw: bytes) -> str:
@@ -501,6 +557,15 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
 
     artisan = repo.get_artisan(session, listing.artisan_id)
 
+    # 3D + the six capture views, when this product was captured that way.
+    job = session.get(ModelJob, listing.model_job_id) if listing.model_job_id else None
+    model_ready = bool(job and job.status == "ready" and job.has_model)
+    views = [a for a in (job.views if job else []) if model_jobs.view_path(job.id, a).exists()]
+    try:
+        edited = set(json.loads(listing.edited_fields_json or "[]"))
+    except ValueError:
+        edited = set()
+
     # The page had no way to actually buy anything. Until we are a registered
     # ONDC BPP there is no in-network checkout, so we hand the buyer to the
     # maker on WhatsApp rather than show a dead "Buy" button — addressed to the
@@ -518,6 +583,11 @@ def storefront(listing_id: str, request: Request, session: Session = Depends(get
         context={
             "listing": listing,
             "artisan": artisan,
+            "base_url": _base_url(request),
+            "model_url": f"/api/models/{job.id}/model.glb" if model_ready else None,
+            "model_is_test": bool(job and job.provider == "mock"),
+            "view_urls": [(a, f"/api/models/{job.id}/views/{a}.jpg") for a in views] if job else [],
+            "text_edited": bool(edited & {"title", "description"}),
             "image_mime": img_mime,
             # Relative on purpose: the page is already being served from the
             # right origin, and an absolute URL would break if the page were
@@ -548,3 +618,167 @@ def qr_png(listing_id: str, request: Request, session: Session = Depends(get_ses
     # the encoded URL changes with it, so don't let a proxy pin it.
     return Response(content=buf.getvalue(), media_type="image/png",
                     headers={"Cache-Control": "no-store"})
+
+
+# --- 3D models -------------------------------------------------------------
+
+_EDITABLE_FIELDS = {
+    "title", "description", "material", "category", "craft_technique",
+    "production_time", "dimensions", "tags",
+}
+
+
+def _job_out(job: ModelJob, base: str, token: str | None = None) -> ModelJobOut:
+    return ModelJobOut(
+        job_id=job.id,
+        status=job.status,
+        progress=job.progress,
+        provider=job.provider,
+        model_version=job.model_version,
+        is_test_model=job.provider == "mock",
+        error=job.error if job.status in ("failed", "unavailable", "expired") else "",
+        views=job.views,
+        model_url=f"{base}/api/models/{job.id}/model.glb" if job.status == "ready" and job.has_model else None,
+        created_at=job.created_at,
+        finished_at=job.finished_at,
+        token=token,
+    )
+
+
+def _owned_job(session: Session, job_id: str, token: str | None) -> ModelJob:
+    job = session.get(ModelJob, job_id) if job_id.isalnum() else None
+    # Same 404 for "no such job" and "wrong token": don't confirm ids exist.
+    if job is None or not model_jobs.token_ok(job, token):
+        raise HTTPException(404, "No such 3D job")
+    return job
+
+
+@app.post("/api/models", response_model=ModelJobOut, status_code=201)
+async def create_model_job(
+    request: Request,
+    front: UploadFile = File(...),
+    right: UploadFile = File(...),
+    back: UploadFile = File(...),
+    left: UploadFile = File(...),
+    top: UploadFile = File(...),
+    bottom: UploadFile = File(...),
+    uid: str = Form(""),
+    client_id: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    """Six capture views in; a queued 3D job out.
+
+    All six are required. Each is decoded, size-checked and re-encoded
+    server-side (see jobs.normalise_view) — the Content-Type is not trusted.
+    """
+    files = {"front": front, "right": right, "back": back, "left": left, "top": top, "bottom": bottom}
+    raw: dict[str, bytes] = {}
+    for angle, f in files.items():
+        data = await f.read(model_jobs.MAX_UPLOAD_BYTES + 1)
+        if not data:
+            raise HTTPException(400, f"{angle} photo is empty")
+        raw[angle] = data
+    try:
+        job, token = model_jobs.create_job(
+            session, views=raw, owner_uid=uid.strip() or None, client_id=client_id.strip()[:64]
+        )
+    except model_jobs.InvalidUpload as e:
+        raise HTTPException(400, str(e)) from e
+    return _job_out(job, _base_url(request), token)
+
+
+@app.get("/api/models/{job_id}", response_model=ModelJobOut)
+def get_model_job(
+    job_id: str,
+    request: Request,
+    x_model_token: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+):
+    return _job_out(_owned_job(session, job_id, x_model_token), _base_url(request))
+
+
+@app.post("/api/models/{job_id}/retry", response_model=ModelJobOut)
+def retry_model_job(
+    job_id: str,
+    request: Request,
+    x_model_token: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+):
+    job = model_jobs.retry(session, _owned_job(session, job_id, x_model_token))
+    return _job_out(job, _base_url(request))
+
+
+@app.get("/api/models/{job_id}/model.glb")
+def model_glb(job_id: str, session: Session = Depends(get_session)):
+    """The model file. Public by capability: the id is 128 random bits.
+
+    Buyers load it from the storefront, so it can't sit behind the artisan's
+    token; it is only ever linked from the owner's app and published pages.
+    Immutable per job id, so phones and CDNs may cache it for good.
+    """
+    job = session.get(ModelJob, job_id) if job_id.isalnum() else None
+    path = model_jobs.model_path(job_id) if job is not None else None
+    if job is None or job.status != "ready" or path is None or not path.exists():
+        raise HTTPException(404, "No model")
+    return FileResponse(
+        path,
+        media_type="model/gltf-binary",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
+@app.get("/api/models/{job_id}/views/{angle}.jpg")
+def model_view(
+    job_id: str,
+    angle: str,
+    token: str | None = None,
+    x_model_token: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+):
+    """One capture view. Owner-only until the product is published."""
+    if angle not in model3d.ANGLES:
+        raise HTTPException(404, "No such view")
+    job = session.get(ModelJob, job_id) if job_id.isalnum() else None
+    if job is None:
+        raise HTTPException(404, "No such view")
+    published = job.listing_id is not None
+    if not published and not model_jobs.token_ok(job, x_model_token or token):
+        raise HTTPException(404, "No such view")
+    path = model_jobs.view_path(job_id, angle)
+    if not path.exists():
+        raise HTTPException(404, "No such view")
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=86400" if published else "private, no-store"},
+    )
+
+
+@app.post("/api/listings/{listing_id}/model", response_model=ModelJobOut)
+def attach_model_later(
+    listing_id: str,
+    request: Request,
+    job_id: str = Form(...),
+    uid: str = Form(""),
+    x_model_token: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+):
+    """Link a 3D job to an already-published listing.
+
+    For products captured offline: the listing can go live (from the publish
+    queue) before its six photos have uploaded. The device keeps the photos,
+    uploads them when it can, and then attaches the job here. Needs both the
+    listing's owner uid and the job's device token.
+    """
+    listing = repo.get_listing(session, listing_id)
+    artisan = repo.get_artisan_by_uid(session, uid) if uid else None
+    if listing is None or artisan is None or listing.artisan_id != artisan.id:
+        raise HTTPException(404, "No such listing")
+    job = _owned_job(session, job_id, x_model_token)
+    job.listing_id = listing_id
+    listing.model_job_id = job.id
+    session.add(job)
+    session.add(listing)
+    session.commit()
+    session.refresh(job)
+    return _job_out(job, _base_url(request))

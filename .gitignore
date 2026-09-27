@@ -34,6 +34,12 @@ htmlcov/
 # --- local database / uploads (generated at runtime) ---
 backend/karigar.db
 backend/*.db
+# Uploaded capture views + generated 3D models (MEDIA_DIR). User data — never commit.
+backend/media/
+# 3D worker: venv, generated models, local test inputs
+model3d_server/.venv/
+model3d_server/out/
+model3d_server/samples/
 backend/*.sqlite3
 # config.py anchors the sqlite file at backend/, but belt-and-braces: uvicorn
 # is normally launched from the repo root, so a stray db here is one careless

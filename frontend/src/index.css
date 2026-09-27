@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: light;
+  /* ink (tailwind colors.ink #15100c) as channels, for alpha in plain CSS */
+  --ink-rgb: 21 16 12;
 }
 
 html, body, #root {
@@ -23,12 +25,23 @@ body {
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
 @layer components {
+  /* flex + centred, not a plain block.
+     A <button> centres TEXT for free, which hid this for a long time: any
+     non-text child — an <svg> icon — is an inline box that sits on the text
+     baseline, so it hangs low and off-centre, and the margin utilities
+     meant to space it are inert with no flex container to act in. That is
+     exactly how the Google "G" on the sign-in button rendered misaligned
+     while an emoji (📱, a text glyph) in the button beside it looked fine.
+     Centring here fixes every icon button at once; text-only buttons render
+     identically either way. */
   .btn-primary {
-    @apply w-full rounded-2xl bg-clay-600 text-white text-lg font-semibold py-4
+    @apply w-full flex items-center justify-center gap-2 rounded-2xl bg-clay-600
+           text-white text-lg font-semibold py-4
            shadow-soft active:scale-[0.98] transition disabled:opacity-50;
   }
   .btn-ghost {
-    @apply w-full rounded-2xl border-2 border-clay-300 text-clay-800 text-base font-medium py-3
+    @apply w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-clay-300
+           text-clay-800 text-base font-medium py-3
            active:scale-[0.98] transition;
   }
   .card {
@@ -56,3 +69,43 @@ body {
 
 .fade-in { animation: fade 0.4s ease both; }
 @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* sheets: scrim fades, panel rises from the bottom edge it lives on */
+.fade-in-fast { animation: fade-plain 0.18s ease-out both; }
+@keyframes fade-plain { from { opacity: 0; } to { opacity: 1; } }
+.sheet-up { animation: sheet-up 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+
+/* onboarding slides: cross-fade + small directional drift */
+.slide-in { animation: slide-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes slide-in { from { opacity: 0; transform: translateX(var(--slide-from, 16px)); } to { opacity: 1; transform: none; } }
+
+/* staggered list entrance (guide timeline) */
+.rise { animation: fade 0.35s ease both; }
+
+/* video studio progress shimmer */
+@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.shimmer::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* tutorial: spotlight hole (its shadow is the dim backdrop), pulse, finger */
+.tour-spot {
+  box-shadow: 0 0 0 9999px rgb(var(--ink-rgb) / 0.62);
+  transition: left 0.35s cubic-bezier(0.2, 0.9, 0.3, 1), top 0.35s cubic-bezier(0.2, 0.9, 0.3, 1),
+    width 0.35s cubic-bezier(0.2, 0.9, 0.3, 1), height 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.tour-ring { position: absolute; inset: 0; border-radius: inherit; border: 3px solid theme(colors.haldi.DEFAULT); animation: tour-pulse 1.6s ease-out infinite; }
+@keyframes tour-pulse { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.12); } }
+.tour-finger { animation: tour-tap 1.6s ease-in-out infinite; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35)); }
+@keyframes tour-tap { 0%, 100% { transform: translate(0, 6px); } 45% { transform: translate(0, -4px); } 55% { transform: translate(0, -2px) scale(0.94); } }
+.tour-bubble { transition: top 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), left 0.3s cubic-bezier(0.2, 0.9, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in, .fade-in-fast, .sheet-up, .slide-in, .rise { animation: none; }
+  .tour-ring, .tour-finger { animation: none; }
+  .tour-spot, .tour-bubble { transition: none; }
+  .shimmer::after, .mic-ring::before { animation: none; }
+}

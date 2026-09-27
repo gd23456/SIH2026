@@ -111,6 +111,13 @@ class Listing(SQLModel, table=True):
 
     price: int = 0
     image_b64: str = ""
+    # The 3D job built from this product's six capture views, if any. The
+    # model itself lives on the job (status, file, version) so a model that
+    # finishes AFTER publishing still appears on the storefront.
+    model_job_id: str | None = Field(default=None, index=True)
+    # Which text fields the artisan edited by hand (JSON list). Everything
+    # else in the listing text was AI-drafted — shown to buyers as such.
+    edited_fields_json: str = "[]"
     # Impact counters: storefront opens and QR scans (see /api/impact).
     views: int = 0
     scans: int = 0
@@ -130,3 +137,48 @@ class Listing(SQLModel, table=True):
 
     def description(self, lang: str = "en") -> str:
         return getattr(self, f"description_{lang}", "") or self.description_en
+
+
+class ModelJob(SQLModel, table=True):
+    """One 3D reconstruction: six capture views in, a GLB out.
+
+    Lives independently of Listing because capture happens at the START of
+    the selling flow, long before a listing exists; publish attaches it.
+
+    `id` is 128 bits of randomness and doubles as the capability in the
+    public model URL. `token_hash` guards everything else (status, retry,
+    raw views) for the device that created it.
+    """
+
+    id: str = Field(primary_key=True)
+    token_hash: str = ""
+    owner_uid: str | None = Field(default=None, index=True)
+    # Device-generated idempotency key: an offline upload retried five times
+    # must create one job, not five.
+    client_id: str = Field(default="", index=True)
+    listing_id: str | None = Field(default=None, index=True)
+
+    # queued -> processing -> ready | failed   (and expired, after cleanup)
+    status: str = Field(default="queued", index=True)
+    provider: str = ""
+    provider_task_id: str = ""
+    model_version: str = ""
+    progress: int = 0
+    attempts: int = 0
+    error: str = ""
+    views_json: str = "[]"  # angles stored, e.g. ["front", ...]
+    has_model: bool = False
+    model_bytes: int = 0
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    submitted_at: datetime | None = None
+    finished_at: datetime | None = None
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def views(self) -> list[str]:
+        try:
+            v = json.loads(self.views_json)
+        except ValueError:
+            return []
+        return v if isinstance(v, list) else []
