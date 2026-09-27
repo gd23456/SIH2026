@@ -19,6 +19,20 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,ico,webmanifest,woff2}"],
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
+        // Generated 3D models: immutable per job id (the server says so), so
+        // once viewed they open again with no network — and never re-download
+        // a multi-MB file on a metered connection.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => /\/api\/models\/[0-9a-f]{32}\/model\.glb$/.test(url.pathname),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "karigar-models",
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
       // Let the SW work in `vite preview` / dev testing too.
       devOptions: { enabled: false },

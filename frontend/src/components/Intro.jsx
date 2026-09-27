@@ -13,7 +13,7 @@ import { LANGS, t } from "../lib/i18n";
  * Shown whenever there is no account, which makes sign-out's destination fall
  * out for free rather than needing its own special case.
  */
-export default function Intro({ lang, setLang, onContinue, onConnect }) {
+export default function Intro({ lang, setLang, onContinue, onConnect, onTour }) {
   return (
     <div className="flex flex-col min-h-full px-6 pt-10 pb-10 safe-top safe-bottom fade-in">
       <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
@@ -54,6 +54,13 @@ export default function Intro({ lang, setLang, onContinue, onConnect }) {
         <button className="btn-primary mt-2" onClick={onContinue}>
           {t("start", lang)} →
         </button>
+
+        {/* The tour runs on first "Start selling"; this replays it any time. */}
+        {onTour && (
+          <button onClick={onTour} className="w-full min-h-[44px] text-center text-sm text-clay-700 font-semibold">
+            {t("helpHow", lang)}
+          </button>
+        )}
 
         {/* Connection has to stay reachable before sign-in. On a fresh install
             localStorage is empty, so the app points at the emulator default and

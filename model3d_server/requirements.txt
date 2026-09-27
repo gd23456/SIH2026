@@ -1,0 +1,26 @@
+# Karigar 3D worker — Hunyuan3D-2mv shape + photo colouring.
+# Install:  uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+#           uv pip install --python .venv/bin/python --no-deps "hy3dgen @ git+https://github.com/Tencent-Hunyuan/Hunyuan3D-2@f8db63096c8282cb27354314d896feba5ba6ff8a"
+# (--no-deps: hy3dgen's own list pulls gradio and the texture stack we don't use.)
+torch>=2.4
+torchvision
+diffusers
+transformers>=4.48
+accelerate
+einops
+omegaconf
+safetensors
+huggingface_hub
+opencv-python-headless
+numpy
+scipy
+scikit-image
+trimesh
+pymeshlab
+pygltflib
+pillow
+rembg[cpu]
+fastapi
+uvicorn
+python-multipart
+tqdm

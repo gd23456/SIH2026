@@ -32,6 +32,32 @@ class Settings(BaseSettings):
     PUBLIC_BASE_URL: str = ""
     DATABASE_URL: str = "sqlite:///./karigar.db"
 
+    # "production" refuses development-only providers (see model3d). Anything
+    # else is treated as development.
+    APP_ENV: str = "development"
+
+    # --- 3D reconstruction ------------------------------------------------
+    # local    — self-hosted Hunyuan3D-2mv worker (model3d_server/). Free; runs
+    #            on a Mac or any GPU box. Needs MODEL3D_LOCAL_URL.
+    # meshy    — Meshy multi-image-to-3D (hosted, paid). Needs MESHY_API_KEY.
+    # mock     — local test provider; refused when APP_ENV=production.
+    # disabled — capture still works; no 3D is generated.
+    # Blank = "meshy" when a key is configured, otherwise "disabled". Never
+    # silently "mock": a fake model must be an explicit developer choice.
+    MODEL3D_PROVIDER: str = ""
+    MESHY_API_KEY: str = ""
+    MESHY_API_BASE: str = "https://api.meshy.ai/openapi/v1"
+    MESHY_AI_MODEL: str = "latest"
+    MODEL3D_LOCAL_URL: str = ""
+    # Shared secret between this backend and the worker (Bearer token).
+    MODEL3D_LOCAL_TOKEN: str = ""
+    # Give up on a job the provider hasn't finished in this long.
+    MODEL3D_TIMEOUT_S: int = 1800
+    # Captures + models for products never published are deleted after this.
+    MODEL3D_RETENTION_DAYS: int = 7
+    # Where uploaded views and generated models are stored.
+    MEDIA_DIR: str = "./media"
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
@@ -58,6 +84,24 @@ class Settings(BaseSettings):
         if not path.is_absolute():
             path = _BACKEND_DIR / path
         return f"{prefix}{path.resolve().as_posix()}"
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV.strip().lower() == "production"
+
+    @property
+    def media_path(self) -> Path:
+        path = Path(self.MEDIA_DIR)
+        if not path.is_absolute():
+            path = _BACKEND_DIR / path
+        return path.resolve()
+
+    @property
+    def model3d_provider(self) -> str:
+        chosen = self.MODEL3D_PROVIDER.strip().lower()
+        if not chosen:
+            return "meshy" if self.MESHY_API_KEY.strip() else "disabled"
+        return chosen
 
     @property
     def use_mock(self) -> bool:

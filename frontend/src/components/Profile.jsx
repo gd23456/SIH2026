@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
-import { Avatar, Spinner } from "./ui";
+import { Avatar, Spinner, Icon } from "./ui";
 import { getArtisan, upsertArtisan, listChannels, connectChannel, getImpact } from "../lib/api";
 import { signOut } from "../lib/auth";
 
@@ -41,7 +41,7 @@ function ChannelRow({ ch, lang, onConnect, busy }) {
   );
 }
 
-export default function Profile({ lang, account, setAccount, onBack, onMyProducts, onPlans, onPrivacy, onSignedOut, onConnect }) {
+export default function Profile({ lang, account, setAccount, onBack, onMyProducts, onPlans, onPrivacy, onSignedOut, onConnect, onGuide }) {
   const [server, setServer] = useState(null);
   const [channels, setChannels] = useState(null);
   const [impact, setImpact] = useState(null);
@@ -181,6 +181,20 @@ export default function Profile({ lang, account, setAccount, onBack, onMyProduct
           <p className="text-xs text-clay-500">{t("plan", lang)}</p>
         </button>
       </div>
+
+      {/* the guide, for any time the artisan wonders "what next?" */}
+      {onGuide && (
+        <button onClick={onGuide} className="card p-4 mt-3 w-full flex items-center gap-3 text-left active:scale-[0.98] transition">
+          <span className="h-11 w-11 rounded-2xl bg-clay-100 text-clay-700 flex items-center justify-center shrink-0">
+            <Icon name="book" size={22} />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-semibold text-clay-900">{t("helpHow", lang)}</span>
+            <span className="block text-xs text-clay-500 leading-snug mt-0.5">{t("helpHowSub", lang)}</span>
+          </span>
+          <Icon name="chevronRight" size={20} className="text-clay-400" />
+        </button>
+      )}
 
       {/* channels */}
       <div className="card p-4 mt-3">

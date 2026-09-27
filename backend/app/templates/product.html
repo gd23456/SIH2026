@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ listing.title_en }} · Karigar AI</title>
 <meta name="description" content="{{ listing.description_en[:150] }}">
+<!-- Link previews: what WhatsApp / Instagram show when this URL is shared. -->
+<meta property="og:type" content="product">
+<meta property="og:title" content="{{ listing.title_en }} · ₹{{ "{:,}".format(listing.price) }}">
+<meta property="og:description" content="{{ listing.description_en[:150] }}">
+<meta property="og:url" content="{{ base_url }}/p/{{ listing.id }}">
+{% if listing.image_b64 %}<meta property="og:image" content="{{ base_url }}/api/listings/{{ listing.id }}/image">{% endif %}
+<meta name="twitter:card" content="summary_large_image">
 <!--
   Everything here is inline on purpose. On demo day the phone is on the
   laptop's hotspot with no route to the internet, so any CDN font, script or
@@ -68,6 +75,29 @@
   .avatar{width:42px;height:42px;border-radius:50%;background:var(--brand);
           color:#fff;display:flex;align-items:center;justify-content:center;
           font-weight:700;font-size:17px;flex:0 0 auto}
+  .media{position:relative}
+  .switch{display:flex;gap:6px;margin:0 0 10px}
+  .switch button{flex:1;min-height:44px;font:inherit;font-size:14px;font-weight:600;
+      border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;cursor:pointer}
+  .switch button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+  .viewer{width:100%;aspect-ratio:1/1;border-radius:14px;border:1px solid var(--line);
+      background:radial-gradient(circle at 50% 40%,#fff,#efe7dc);display:block}
+  model-viewer{--poster-color:transparent;width:100%;height:100%;border-radius:14px}
+  /* top-right: model-viewer puts its own AR button bottom-right */
+  .vtools{position:absolute;right:10px;top:10px;display:flex;gap:6px}
+  .vtools button{min-width:44px;min-height:44px;border-radius:12px;border:1px solid var(--line);
+      background:rgba(255,255,255,.92);color:#2B2320;font-size:13px;font-weight:600;cursor:pointer;padding:0 12px}
+  .vhint{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 0}
+  .testmodel{position:absolute;left:10px;top:10px;font-size:11px;font-weight:700;
+      background:#E8A13A;color:#2B2320;border-radius:999px;padding:3px 9px}
+  .thumbs{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+  .thumbs button{flex:0 0 auto;border:2px solid transparent;border-radius:10px;padding:0;
+      background:none;cursor:pointer;text-align:center;font:inherit}
+  .thumbs button[aria-pressed="true"]{border-color:var(--brand)}
+  .thumbs img{width:64px;height:64px;object-fit:cover;border-radius:8px;display:block}
+  .thumbs span{display:block;font-size:10px;font-weight:600;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.05em;padding:2px 0}
+  .prov{font-size:12px;color:var(--muted);margin:10px 0 0;display:flex;gap:6px;align-items:flex-start}
   .qr{display:block;margin:10px auto 0;width:150px;height:150px;
       border:1px solid var(--line);border-radius:10px;background:#fff}
   footer{text-align:center;color:var(--muted);font-size:12px;padding:20px 0 28px}
@@ -85,12 +115,49 @@
 
   <header>🧺 Karigar AI</header>
 
-  {% if listing.image_b64 %}
-    <img class="photo" src="data:{{ image_mime | default('image/png') }};base64,{{ listing.image_b64 }}"
-         alt="{{ listing.title_en }}">
-  {% else %}
-    <div class="photo nophoto">No photo provided</div>
+  {% if model_url %}
+  <div class="switch" role="group" aria-label="Product view">
+    <button type="button" id="showPhotos" aria-pressed="true">Photos</button>
+    <button type="button" id="show3d" aria-pressed="false">View in 3D</button>
+  </div>
   {% endif %}
+
+  <div class="media">
+    <div id="photoPane">
+      {% if listing.image_b64 %}
+        <img class="photo" id="mainPhoto" src="data:{{ image_mime | default('image/png') }};base64,{{ listing.image_b64 }}"
+             alt="{{ listing.title_en }}">
+      {% else %}
+        <div class="photo nophoto">No photo provided</div>
+      {% endif %}
+      {% if view_urls %}
+      <div class="thumbs" id="thumbs" aria-label="Photos from every side">
+        {% if listing.image_b64 %}
+        <button type="button" aria-pressed="true" data-src="data:{{ image_mime | default('image/png') }};base64,{{ listing.image_b64 }}">
+          <img src="data:{{ image_mime | default('image/png') }};base64,{{ listing.image_b64 }}" alt=""><span>Main</span>
+        </button>
+        {% endif %}
+        {% for angle, url in view_urls %}
+        <button type="button" aria-pressed="false" data-src="{{ url }}">
+          <img src="{{ url }}" alt="{{ angle }} view" loading="lazy"><span>{{ angle }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% if model_url %}
+    <div id="viewerPane" hidden>
+      <div class="viewer" id="viewerBox" data-src="{{ model_url }}" data-alt="3D model of {{ listing.title_en }}">
+        {% if model_is_test %}<span class="testmodel">Test model</span>{% endif %}
+      </div>
+      <div class="vtools">
+        <button type="button" id="vReset" aria-label="Reset view">Reset</button>
+        <button type="button" id="vFull" aria-label="Full screen">Full screen</button>
+      </div>
+      <p class="vhint">Drag to turn · pinch or scroll to zoom · two fingers to move</p>
+    </div>
+    {% endif %}
+  </div>
 
   <div class="card">
     <!-- One title + one description, switchable — not three stacked copies. -->
@@ -112,7 +179,7 @@
     {% if listing.gi_verified %}
       <span class="gi-verified">✓ Verified GI · {{ listing.gi_registry_name }}{% if listing.gi_state %} ({{ listing.gi_state }}){% endif %}</span>
     {% elif listing.gi_candidate %}
-      <span class="gi">🏷️ Possible GI: {{ listing.gi_candidate }}</span>
+      <span class="gi">🏷️ Possible GI: {{ listing.gi_candidate }} · not yet verified</span>
     {% endif %}
 
     {#
@@ -131,6 +198,12 @@
     {% if listing.description_en %}<p class="desc" data-lang="en">{{ listing.description_en }}</p>{% endif %}
     {% if listing.description_hi %}<p class="desc" data-lang="hi" hidden>{{ listing.description_hi }}</p>{% endif %}
     {% if listing.description_kn %}<p class="desc" data-lang="kn" hidden>{{ listing.description_kn }}</p>{% endif %}
+
+    {#
+      Transparency for the buyer: the words were drafted by AI from what the
+      artisan said, and the artisan reviewed them before publishing.
+    #}
+    <p class="prov">✨ {% if text_edited %}Written by the artisan with AI assistance.{% else %}Description drafted by AI from the artisan's own words, and reviewed by them before publishing.{% endif %}</p>
 
     {% if listing.tags %}
       <div class="tags">
@@ -198,6 +271,60 @@
       show("ttl", lang);
       show("desc", lang);
     }
+    // Photos <-> 3D. model-viewer (vendored, ~1 MB) is only fetched when the
+    // buyer asks for 3D — the page itself stays light on a slow connection.
+    var showPhotos = document.getElementById("showPhotos");
+    var show3d = document.getElementById("show3d");
+    var viewer = null;
+    function mode(is3d) {
+      document.getElementById("photoPane").hidden = is3d;
+      document.getElementById("viewerPane").hidden = !is3d;
+      showPhotos.setAttribute("aria-pressed", String(!is3d));
+      show3d.setAttribute("aria-pressed", String(is3d));
+      if (is3d && !viewer) {
+        var box = document.getElementById("viewerBox");
+        var s = document.createElement("script");
+        s.type = "module";
+        s.src = "/static/vendor/model-viewer-4.3.1.min.js";
+        document.head.appendChild(s);
+        viewer = document.createElement("model-viewer");
+        viewer.setAttribute("src", box.getAttribute("data-src"));
+        viewer.setAttribute("alt", box.getAttribute("data-alt"));
+        viewer.setAttribute("camera-controls", "");
+        viewer.setAttribute("touch-action", "pan-y");
+        viewer.setAttribute("shadow-intensity", "0.8");
+        viewer.setAttribute("ar", "");
+        viewer.setAttribute("interaction-prompt", "auto");
+        box.appendChild(viewer);
+      }
+    }
+    if (show3d) {
+      show3d.addEventListener("click", function () { mode(true); });
+      showPhotos.addEventListener("click", function () { mode(false); });
+      document.getElementById("vReset").addEventListener("click", function () {
+        if (!viewer) return;
+        viewer.cameraOrbit = "auto auto auto";
+        viewer.cameraTarget = "auto auto auto";
+        viewer.fieldOfView = "auto";
+        if (viewer.jumpCameraToGoal) viewer.jumpCameraToGoal();
+      });
+      document.getElementById("vFull").addEventListener("click", function () {
+        var el = document.getElementById("viewerBox");
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (el.requestFullscreen) el.requestFullscreen();
+      });
+    }
+    var thumbs = document.getElementById("thumbs");
+    if (thumbs) thumbs.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button");
+      if (!b) return;
+      var main = document.getElementById("mainPhoto");
+      if (main) main.src = b.getAttribute("data-src");
+      thumbs.querySelectorAll("button").forEach(function (x) {
+        x.setAttribute("aria-pressed", String(x === b));
+      });
+    });
+
     var tabs = document.getElementById("langtabs");
     if (tabs) tabs.addEventListener("click", function (ev) {
       var b = ev.target.closest(".langtab");
